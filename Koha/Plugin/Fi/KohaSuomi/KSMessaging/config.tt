@@ -1,0 +1,146 @@
+[% USE KohaDates %]
+[% USE Asset %]
+[% USE raw %]
+[% INCLUDE 'doc-head-open.inc' %]
+<title>KSMessaging configuration</title>
+[% Asset.css("lib/codemirror/codemirror.min.css") | $raw %]
+<style>
+.code-example {
+    background: #f6f8fa;
+    border: 1px solid #d9dee3;
+    border-radius: 0.4rem;
+    padding: 0.75rem 0.85rem;
+    margin: 0.5rem 0 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+</style>
+[% INCLUDE 'doc-head-close.inc' %]
+</head>
+<body id="plugins_ksmessaging_configure" class="plugins">
+[% WRAPPER 'header.inc' %]
+    [% INCLUDE 'cat-search.inc' %]
+[% END %]
+
+<div class="main container-fluid">
+    <div class="row">
+        <div class="col-12 col-xl-10">
+            <main>
+
+                [% INCLUDE 'messages.inc' %]
+
+                <div id="breadcrumbs"><a href="/cgi-bin/koha/mainpage.pl">Home</a> &rsaquo; <a href="/cgi-bin/koha/plugins/plugins-home.pl">Plugins</a> &rsaquo; Configure KSMessaging</div>
+
+                [% IF saved %]
+                    <div class="alert alert-success mt-3">Configuration saved.</div>
+                [% END %]
+                [% IF error %]
+                    <div class="alert alert-danger mt-3">[% error | html %]</div>
+                [% END %]
+
+                <div class="page-section mt-3">
+
+                    <h1>KSMessaging configuration</h1>
+
+                    <form method="post" class="validated">
+                        [% INCLUDE 'csrf-token.inc' %]
+                        <input type="hidden" name="class" value="[% CLASS | html %]"/>
+                        <input type="hidden" name="method" value="[% METHOD | html %]"/>
+                        <input type="hidden" name="save" value="1" />
+
+                        <fieldset class="rows">
+                            <ol>
+                                <li>
+                                    <label for="config">Configuration (YAML)</label>
+                                    <textarea id="config" name="config" rows="12" cols="70">[% config | html %]</textarea>
+                                    <div class="hint">The configuration is stored as YAML.
+                                    <a class="toggle-example" href="#" id="toggle-example">Show example</a>
+                                    <pre class="code-example" id="example-block" style="display: none;"><code>suomifi:
+  branches:
+    default:
+      stagingdir: /tmp/ksmessaging
+      contact: kirjasto@example.fi
+      cachekey: ksmessaging_token
+      rest:
+        baseUrl: https://example.com/api
+        username: user
+        # The REST password is handled internally (change-suomifi-password.pl cronjob) and stored separately in plugin_data.
+        serviceid: service
+      ipostpdf:
+        customerid: customer
+        customerpass: secret
+        ovtid: OVT
+        senderid: sender
+        printprovider: provider
+        fileprefix: prefix
+letters:
+  branches:
+    default:
+      stagingdir: /tmp/ksmessaging
+      contact: kirjasto@example.fi
+      ipostepl:
+        encoding: latin1
+        fileprefix: EPL
+        code: 123
+        header: Header
+        layout:
+          firstpage: 40
+          otherpages: 60
+          templatecode: 1
+          contpagecode: 2
+      ipostpdf:
+        customerid: customer
+        customerpass: secret
+        ovtid: OVT
+        senderid: sender
+        printprovider: provider
+        fileprefix: prefix
+      filetransfer:
+        host: ftp.example.com
+        port: 22
+        remotedir: /incoming
+        user: transfer
+        password: secret
+        protocol: sftp
+  skipletters: RETURN,OVERDUE
+  combineacrossbranches: no</code></pre></div>
+                                </li>
+
+                            </ol>
+                        </fieldset>
+
+                        <fieldset class="action">
+                            <input type="submit" class="btn btn-primary" value="Save configuration" />
+                            <a class="btn btn-default" href="/cgi-bin/koha/plugins/plugins-home.pl">Cancel</a>
+                        </fieldset>
+                    </form>
+
+                </div>
+
+            </main>
+        </div>
+    </div>
+</div>
+
+[% Asset.js("lib/codemirror/codemirror.min.js") | $raw %]
+[% Asset.js("lib/codemirror/yaml.min.js") | $raw %]
+<script>
+    var editor = CodeMirror.fromTextArea(document.getElementById("config"), {
+        mode: "yaml",
+        lineNumbers: true,
+        lineWrapping: true
+    });
+    document.getElementById("toggle-example").addEventListener("click", function (e) {
+        e.preventDefault();
+        var block = document.getElementById("example-block");
+        var toggle = document.getElementById("toggle-example");
+        if (block.style.display === "none") {
+            block.style.display = "block";
+            toggle.textContent = "Hide example";
+        } else {
+            block.style.display = "none";
+            toggle.textContent = "Show example";
+        }
+    });
+</script>
+
+[% INCLUDE 'intranet-bottom.inc' %]

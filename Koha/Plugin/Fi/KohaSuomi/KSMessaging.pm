@@ -9,6 +9,9 @@ use base qw(Koha::Plugins::Base);
 use C4::Context;
 use utf8;
 
+## Configuration module (read/write plugin_data config, fallback to koha-conf.xml)
+use Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Config;
+
 ## Here we set our plugin version
 our $VERSION = "1.0.0";
 
@@ -65,6 +68,39 @@ sub uninstall() {
     my ( $self, $args ) = @_;
 
     return 1;
+}
+
+## This is the configure page.  It lets the administrator view and edit the
+## REST configuration (and optionally the REST password).  The configuration
+## is stored in plugin_data via Modules::Config, falling back to the
+## 'ksmessaging' section in koha-conf.xml when no plugin_data exists yet.
+sub configure {
+    my ( $self, $args ) = @_;
+
+    my $cgi     = $self->{'cgi'};
+    my $template = $self->get_template( { file => 'config.tt' } );
+
+    # Save the configuration if the admin pressed "Save"
+    if ( $cgi->param('save') ) {
+        my $config = Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Config->new({});
+        if ( $config->save( $cgi ) ) {
+            $template->param( saved => 1 );
+        }
+        else {
+            $template->param( error => 'Failed to save configuration. Check that the YAML is valid.' );
+        }
+    }
+
+    # Load the configuration for display (plugin_data first, koha-conf.xml fallback)
+    my $config = Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Config->new({});
+    $config->load_for_configure;
+
+    $template->param(
+        config => $config->loadedConfigForDisplay,
+    );
+
+    print $cgi->header( -charset => 'utf-8' );
+    print $template->output();
 }
 
 1;
