@@ -41,8 +41,30 @@ sub new {
     ## and returns our actual 
     my $self = $class->SUPER::new($args);
 
+    $self->{metadata}->{name} = $self->get_localized_metadata()->[0];
+    $self->{metadata}->{description} = $self->get_localized_metadata()->[1];
+
     return $self;
 }
+
+sub get_localized_metadata {
+    my ($self) = @_;
+    my $lang = C4::Languages::getlanguage() || 'en';
+    my ($name, $description);
+
+    if ( $lang eq 'sv-SE' ) {
+        $name = "KSMessaging: ett meddelandeplugin";
+        $description = "Använder meddelanden via Suomi.fi eller iPost (Lokala databaser)";
+    } elsif ( $lang eq 'fi-FI' ) {
+        $name = "KSMessaging: viestinlähetysliitännäinen";
+        $description = "Lähettää viestejä kirjastoasiakkaille Suomi.fi- tai iPost-viestintärajapinnan kautta (Paikalliskannat)";
+    } else {
+        $name = "KSMessaging: a messaging plugin";
+        $description = "Sends messages to patrons via the Suomi.fi or iPost messaging (Local databases)";
+    }
+    return ($name, $description);
+}
+
 ## This is the 'install' method. Any database tables or other setup that should
 ## be done when the plugin if first installed should be executed in this method.
 ## The installation method should always return true if the installation succeeded
