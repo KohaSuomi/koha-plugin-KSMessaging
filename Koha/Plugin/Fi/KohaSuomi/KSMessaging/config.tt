@@ -1,8 +1,17 @@
+[% IF LANG == 'en' %]
+    [% PROCESS "$PLUGIN_DIR/i18n/default.inc" %]
+[% ELSE %]
+    [% TRY %]
+        [% PROCESS "$PLUGIN_DIR/i18n/${LANG}.inc" %]
+    [% CATCH %]
+        [% PROCESS "$PLUGIN_DIR/i18n/default.inc" %]
+    [% END %]
+[% END %]
 [% USE KohaDates %]
 [% USE Asset %]
 [% USE raw %]
 [% INCLUDE 'doc-head-open.inc' %]
-<title>KSMessaging configuration</title>
+<title>[% T.config_1 %]</title>
 [% Asset.css("lib/codemirror/codemirror.min.css") | $raw %]
 <style>
 .code-example {
@@ -28,10 +37,10 @@
 
                 [% INCLUDE 'messages.inc' %]
 
-                <div id="breadcrumbs"><a href="/cgi-bin/koha/mainpage.pl">Home</a> &rsaquo; <a href="/cgi-bin/koha/plugins/plugins-home.pl">Plugins</a> &rsaquo; Configure KSMessaging</div>
+                <div id="breadcrumbs"><a href="/cgi-bin/koha/mainpage.pl">[% T.config_2 %]</a> &rsaquo; <a href="/cgi-bin/koha/plugins/plugins-home.pl">[% T.config_3 %]</a>[% T.config_4 %]</div>
 
                 [% IF saved %]
-                    <div class="alert alert-success mt-3">Configuration saved.</div>
+                    <div class="alert alert-success mt-3">[% T.config_5 %]</div>
                 [% END %]
                 [% IF error %]
                     <div class="alert alert-danger mt-3">[% error | html %]</div>
@@ -39,10 +48,11 @@
 
                 <div class="page-section mt-3">
 
-                    <h1>KSMessaging configuration</h1>
+                    <h1>[% T.config_1 %]</h1>
 
                     <form method="post" class="validated">
                         [% INCLUDE 'csrf-token.inc' %]
+
                         <input type="hidden" name="class" value="[% CLASS | html %]"/>
                         <input type="hidden" name="method" value="[% METHOD | html %]"/>
                         <input type="hidden" name="save" value="1" />
@@ -50,10 +60,11 @@
                         <fieldset class="rows">
                             <ol>
                                 <li>
-                                    <label for="config">Configuration (YAML)</label>
+                                    <label for="config">[% T.config_6 %]</label>
                                     <textarea id="config" name="config" rows="12" cols="70">[% config | html %]</textarea>
-                                    <div class="hint">The configuration is stored as YAML.
-                                    <a class="toggle-example" href="#" id="toggle-example">Show example</a>
+                                    <div class="hint">
+                                        [% T.config_7 %]
+                                    <a class="toggle-example" href="#" id="toggle-example">[% T.config_8 %]</a>
                                     <pre class="code-example" id="example-block" style="display: none;"><code>suomifi:
   branches:
     default:
@@ -71,6 +82,7 @@
         ovtid: OVT
         senderid: sender
         printprovider: provider
+
         fileprefix: prefix
 letters:
   branches:
@@ -109,8 +121,8 @@ letters:
                         </fieldset>
 
                         <fieldset class="action">
-                            <input type="submit" class="btn btn-primary" value="Save configuration" />
-                            <a class="btn btn-default" href="/cgi-bin/koha/plugins/plugins-home.pl">Cancel</a>
+                            <input type="submit" class="btn btn-primary" value="[% T.config_9 %]" />
+                            <a class="btn btn-default" href="/cgi-bin/koha/plugins/plugins-home.pl">[% T.config_10 %]</a>
                         </fieldset>
                     </form>
 
