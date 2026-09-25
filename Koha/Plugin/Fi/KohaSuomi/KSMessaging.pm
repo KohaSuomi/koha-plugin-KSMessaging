@@ -41,8 +41,9 @@ sub new {
     ## and returns our actual 
     my $self = $class->SUPER::new($args);
 
-    $self->{metadata}->{name} = $self->get_localized_metadata()->[0];
-    $self->{metadata}->{description} = $self->get_localized_metadata()->[1];
+    my ($name, $description) = $self->get_localized_metadata();
+    $self->{metadata}->{name} = $name;
+    $self->{metadata}->{description} = $description;
 
     return $self;
 }
@@ -53,13 +54,13 @@ sub get_localized_metadata {
     my ($name, $description);
 
     if ( $lang eq 'sv-SE' ) {
-        $name = "KSMessaging: ett meddelandeplugin";
+        $name = "KSMessaging: Pate";
         $description = "Använder meddelanden via Suomi.fi eller iPost (Lokala databaser)";
     } elsif ( $lang eq 'fi-FI' ) {
-        $name = "KSMessaging: viestinlähetysliitännäinen";
+        $name = "KSMessaging: Pate";
         $description = "Lähettää viestejä kirjastoasiakkaille Suomi.fi- tai iPost-viestintärajapinnan kautta (Paikalliskannat)";
     } else {
-        $name = "KSMessaging: a messaging plugin";
+        $name = "KSMessaging: Pate";
         $description = "Sends messages to patrons via the Suomi.fi or iPost messaging (Local databases)";
     }
     return ($name, $description);
