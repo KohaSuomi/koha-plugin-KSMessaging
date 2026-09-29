@@ -136,10 +136,15 @@ subtest 'save' => sub {
     is( $stored[0]->{value}, "a: 1\nb: 2", 'stores the config text' );
 
     @stored = ();
-    ok( $config->save( { config => "a: 1", password => 'secret' } ), 'valid YAML with password saves' );
-    is( scalar @stored, 2, 'two store calls with password' );
-    is( $stored[1]->{key}, 'suomifi_rest_password', 'password stored under suomifi_rest_password' );
-    is( $stored[1]->{value}, 'secret', 'password value stored' );
+    ok( $config->save( { config => "a: 1", password => 'secret' } ), 'config with an extra password argument saves' );
+
+    # save() deliberately ignores a password.  It is owned by the
+    # change-suomifi-password cronjob through store_password(), and keeping it
+    # out of the stored config stops it being echoed back in the plaintext
+    # textarea that the configure form renders.
+    is( scalar @stored, 1, 'only the config is stored, the password is ignored' );
+    is( $stored[0]->{key},   'ksmessaging_config', 'still stored under ksmessaging_config' );
+    is( $stored[0]->{value}, "a: 1",               'stored config text is unaffected by the password' );
 };
 
 subtest 'save via CGI object' => sub {
@@ -158,9 +163,42 @@ subtest 'save via CGI object' => sub {
     my $config  = $ConfigClass->new( {} );
     my $fake_cgi = bless { config => "a: 1", password => 'pw' }, 'CGI';
     ok( $config->save($fake_cgi), 'CGI object saved' );
-    is( $stored[0]->{key},   'ksmessaging_config',    'CGI branch stores config' );
-    is( $stored[1]->{key},   'suomifi_rest_password', 'CGI branch stores password' );
-    is( $stored[0]->{value}, "a: 1",                  'CGI branch config value' );
+    is( $stored[0]->{key},   'ksmessaging_config', 'CGI branch stores config' );
+    is( $stored[0]->{value}, "a: 1",               'CGI branch config value' );
+    is( scalar @stored, 1, 'CGI branch ignores a password parameter' );
+};
+
+subtest 'REST password is stored separately from the config' => sub {
+    my $config = $ConfigClass->new( {} );
+
+    # store_password is reached only from the change-suomifi-password cronjob.
+    # It refuses empty input before ever touching the database.
+    is( $config->store_password(undef), 0, 'undef password is not stored' );
+    is( $config->store_password(''),    0, 'empty password is not stored' );
+
+    my $stored_password = 'secret';
+    my @requested;
+    my $mock = Test::MockModule->new($ConfigClass);
+    $mock->mock(
+        '_get_plugin_data',
+        sub { my ( $self, $key ) = @_; push @requested, $key; return $stored_password }
+    );
+
+    is( $config->_load_plugin_password, 'secret', 'the stored password is read back' );
+    is( $requested[0], 'suomifi_rest_password', 'read from the suomifi_rest_password key' );
+
+    # getRESTConfig prefers the separately stored password, and falls back to
+    # the password held in the YAML / koha-conf config when none is stored.
+    $mock->mock( 'rootConfig', sub { return { rest => { password => 'from-config' } } } );
+
+    $stored_password = 'secret';
+    is( $config->getRESTConfig->{'password'}, 'secret', 'stored password takes precedence' );
+
+    $stored_password = '';
+    is( $config->getRESTConfig->{'password'}, 'from-config', 'empty stored password falls back to the config' );
+
+    $stored_password = undef;
+    is( $config->getRESTConfig->{'password'}, 'from-config', 'missing stored password falls back to the config' );
 };
 
 subtest 'save validation' => sub {
@@ -341,12 +379,10 @@ subtest 'getSuomiFiCostPool' => sub {
 subtest 'load_for_configure' => sub {
     my $config_mock = Test::MockModule->new($ConfigClass);
     $config_mock->mock( '_load_plugin_config',   sub { return "config:\n  a: 1\n" } );
-    $config_mock->mock( '_load_plugin_password', sub { return 'displaypw' } );
 
     my $config = $ConfigClass->new( {} );
     $config->load_for_configure;
     is( $config->loadedConfigForDisplay,   "config:\n  a: 1\n", 'config exposed for display' );
-    is( $config->loadedPasswordForDisplay, 'displaypw',         'password exposed for display' );
 };
 
 done_testing;
