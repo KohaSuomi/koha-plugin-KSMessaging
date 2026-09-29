@@ -147,10 +147,10 @@ letters:
         var toggle = document.getElementById("toggle-example");
         if (block.style.display === "none") {
             block.style.display = "block";
-            toggle.textContent = "Hide example";
+            toggle.textContent = "[% T.config_11 %]";
         } else {
             block.style.display = "none";
-            toggle.textContent = "Show example";
+            toggle.textContent = "[% T.config_8 %]";
         }
     });
 </script>

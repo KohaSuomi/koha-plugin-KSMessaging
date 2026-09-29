@@ -8,7 +8,8 @@
         config_6                                   = "Configuration (YAML)",
         config_7                                   = "The configuration is stored as YAML.",
         config_8                                   = "Show example",
-        config_9                                  = "Save configuration",
-        config_10                                 = "Cancel",
+        config_9                                   = "Save configuration",
+        config_10                                  = "Cancel",
+        config_11                                  = "Hide example",
     }
 %]
