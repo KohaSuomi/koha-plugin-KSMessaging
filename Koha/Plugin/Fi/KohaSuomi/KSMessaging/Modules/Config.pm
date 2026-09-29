@@ -152,6 +152,9 @@ sub loadedConfigForDisplay {
 
 ## Save the configuration from the configure page into plugin_data.
 ## Accepts either a hashref (->save({...})) or a CGI object (->save($cgi)).
+## Returns 1 on success and 0 on failure.  On failure last_save_error holds a
+## reason code ('empty', 'invalid_yaml' or 'not_a_mapping') so the caller can
+## show a specific message instead of one generic error.
 sub save {
     my ($self, $args) = @_;
 
@@ -164,15 +167,33 @@ sub save {
         $config = $args->{config} || '';
     }
 
-    return 0 unless $config;
+    $self->{last_save_error} = undef;
 
-    # Validate that the config is valid YAML before storing
-    eval { YAML::XS::Load($config) };
-    return 0 if $@;
+    unless ($config) {
+        $self->{last_save_error} = 'empty';
+        return 0;
+    }
+
+    # Validate that the config is a valid YAML mapping before storing
+    my $parsed = eval { YAML::XS::Load($config) };
+    if ($@) {
+        $self->{last_save_error} = 'invalid_yaml';
+        return 0;
+    }
+    if ( ref($parsed) ne 'HASH' ) {
+        $self->{last_save_error} = 'not_a_mapping';
+        return 0;
+    }
 
     $self->_store_plugin_data( 'ksmessaging_config', $config );
 
     return 1;
+}
+
+## Reason why the last save() failed, or undef if it succeeded.
+sub last_save_error {
+    my ($self) = @_;
+    return $self->{last_save_error};
 }
 
 ############################################################

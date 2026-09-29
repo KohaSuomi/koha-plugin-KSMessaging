@@ -11,5 +11,10 @@
         config_9                                   = "Spara",
         config_10                                  = "Avbryt",
         config_11                                  = "Dölj exempel",
+        config_12                                  = "Det gick inte att spara inställningarna. Kontrollera att YAML är giltigt.",
+        config_13                                  = "Konfigurationsfältet är tomt.",
+        config_14                                  = "Det gick inte att spara konfigurationen: YAML-formatet kunde inte tolkas. Kontrollera syntaxen.",
+        config_15                                  = "Det gick inte att spara konfigurationen: YAML måste vara en uppsättning inställningar (nyckel: värde).",
+        config_16                                  = "Konfigurationen sparades inte eftersom säkerhetstoken var ogiltig. Ladda om sidan och försök igen.",
     }
 %]

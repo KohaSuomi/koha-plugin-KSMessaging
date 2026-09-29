@@ -11,6 +11,8 @@ use utf8;
 
 ## Configuration module (read/write plugin_data config, fallback to koha-conf.xml)
 use Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Config;
+## Used to verify the CSRF token submitted with the configuration form
+use Koha::Token;
 
 ## Here we set our plugin version
 our $VERSION = "1.0.0";
@@ -100,30 +102,91 @@ sub uninstall() {
 sub configure {
     my ( $self, $args ) = @_;
 
-    my $cgi     = $self->{'cgi'};
-    my $template = $self->get_template( { file => 'config.tt' } );
+    my $cgi = $self->{'cgi'};
+    my @messages;
+    my $saved;
 
-    # Save the configuration if the admin pressed "Save"
-    if ( $cgi->param('save') ) {
-        my $config = Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Config->new({});
-        if ( $config->save( $cgi ) ) {
-            $template->param( saved => 1 );
-        }
-        else {
-            $template->param( error => 'Failed to save configuration. Check that the YAML is valid.' );
-        }
-    }
-
-    # Load the configuration for display (plugin_data first, koha-conf.xml fallback)
     my $config = Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Config->new({});
     $config->load_for_configure;
 
+    # Show the stored configuration until we know we are handling a submission
+    my $config_for_display = $config->loadedConfigForDisplay;
+
+    # Save the configuration if the admin pressed "Save"
+    if ( $cgi->request_method eq 'POST' && $cgi->param('save') ) {
+
+        # Show what the admin actually submitted, so a failed save does not
+        # throw away the configuration they just typed in
+        $config_for_display = $cgi->param('config') || '';
+
+        if ( !$self->_csrf_token_valid($cgi) ) {
+            push @messages, $self->_configure_message( error => 'config_16' );
+        }
+        elsif ( $config->save($cgi) ) {
+            $saved = 1;
+        }
+        else {
+            push @messages, $self->_configure_message(
+                error => $self->_save_error_key( $config->last_save_error ) );
+        }
+    }
+
+    return $self->_output_configure_page(
+        config  => $config_for_display,
+        messages => \@messages,
+        saved   => $saved,
+    );
+}
+
+## Every exit path funnels through here so that 'messages' and 'saved' are
+## always defined, and no code path can render a half-populated page.
+sub _output_configure_page {
+    my ( $self, %params ) = @_;
+
+    my $template = $self->get_template( { file => 'config.tt' } );
     $template->param(
-        config => $config->loadedConfigForDisplay,
+        config   => $params{config},
+        messages => $params{messages},
+        saved    => $params{saved},
     );
 
-    print $cgi->header( -charset => 'utf-8' );
-    print $template->output();
+    return $self->output_html( $template->output() );
+}
+
+## Build a message for the template.  'key' is an i18n key, so the text is
+## translated by the template rather than hardcoded here.
+sub _configure_message {
+    my ( $self, $type, $key ) = @_;
+
+    return {
+        type        => $type,
+        alert_class => $type eq 'error' ? 'danger' : $type,
+        key         => $key,
+    };
+}
+
+## Map a save() failure reason onto the i18n key that explains it.
+sub _save_error_key {
+    my ( $self, $reason ) = @_;
+
+    return 'config_13' if $reason eq 'empty';
+    return 'config_14' if $reason eq 'invalid_yaml';
+    return 'config_15' if $reason eq 'not_a_mapping';
+
+    return 'config_12';
+}
+
+sub _csrf_token_valid {
+    my ( $self, $cgi ) = @_;
+
+    return unless $cgi;
+
+    return Koha::Token->new->check_csrf(
+        {
+            session_id => scalar $cgi->cookie('CGISESSID'),
+            token      => scalar $cgi->param('csrf_token'),
+        }
+    );
 }
 
 1;

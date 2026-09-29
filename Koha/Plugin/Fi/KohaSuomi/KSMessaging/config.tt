@@ -42,8 +42,8 @@
                 [% IF saved %]
                     <div class="alert alert-success mt-3">[% T.config_5 %]</div>
                 [% END %]
-                [% IF error %]
-                    <div class="alert alert-danger mt-3">[% error | html %]</div>
+                [% FOREACH message IN messages %]
+                    <div class="alert alert-[% message.alert_class | html %] mt-3">[% T.${message.key} %]</div>
                 [% END %]
 
                 <div class="page-section mt-3">

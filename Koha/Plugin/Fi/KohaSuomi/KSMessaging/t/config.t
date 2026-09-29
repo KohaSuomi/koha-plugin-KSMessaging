@@ -4,6 +4,8 @@ use warnings;
 use utf8;
 use Test::More;
 use Test::MockModule;
+use File::Slurp;
+use Template;
 use FindBin qw($Bin);
 use lib "$Bin/../../../../../..";
 
@@ -159,6 +161,122 @@ subtest 'save via CGI object' => sub {
     is( $stored[0]->{key},   'ksmessaging_config',    'CGI branch stores config' );
     is( $stored[1]->{key},   'suomifi_rest_password', 'CGI branch stores password' );
     is( $stored[0]->{value}, "a: 1",                  'CGI branch config value' );
+};
+
+subtest 'save validation' => sub {
+    my @stored;
+    my $mock = Test::MockModule->new($ConfigClass);
+    $mock->mock(
+        '_store_plugin_data',
+        sub { my ( $self, $key, $value ) = @_; push @stored, { key => $key, value => $value } }
+    );
+
+    my $config = $ConfigClass->new( {} );
+
+    is( $config->save( { config => "a: 1\nb: 2" } ), 1, 'flat mapping is accepted' );
+    is( $config->save( { config => "suomifi:\n  branches:\n    default:\n      stagingdir: /tmp/x\n" } ),
+        1, 'nested mapping is accepted' );
+
+    is( $config->save( { config => "- a\n- b" } ),  0, 'valid YAML sequence is rejected' );
+    is( $config->save( { config => 'just a string' } ), 0, 'valid YAML scalar is rejected' );
+    is( $config->save( { config => "   \n" } ),         0, 'whitespace-only config is rejected' );
+    is( $config->save( { config => "# comment only\n" } ), 0, 'comment-only config is rejected' );
+    is( $config->save( { config => "foo: [broken" } ),  0, 'invalid YAML is rejected' );
+    is( $config->save( { config => "\tfoo: bar" } ),     0, 'tab-indented YAML is rejected' );
+    is( $config->save( { config => "a: 1\n b: 2" } ),    0, 'badly indented YAML is rejected' );
+
+    @stored = ();
+    $config->save( { config => "- a\n- b" } );
+    is( scalar @stored, 0, 'nothing stored when the YAML is the wrong shape' );
+
+    @stored = ();
+    $config->save( { config => "a: 1" } );
+    is( scalar @stored, 1, 'accepted mapping is still stored' );
+};
+
+subtest 'save error reasons' => sub {
+    my $mock = Test::MockModule->new($ConfigClass);
+    $mock->mock( '_store_plugin_data', sub { return 1 } );
+
+    my $config = $ConfigClass->new( {} );
+
+    is( $config->save( { config => "a: 1" } ), 1, 'valid mapping is saved' );
+    is( $config->last_save_error, undef, 'no error recorded after a successful save' );
+
+    is( $config->save( { config => '' } ), 0, 'empty config is rejected' );
+    is( $config->last_save_error, 'empty', 'empty config reports the empty reason' );
+
+    is( $config->save( { config => "foo: [broken" } ), 0, 'unparseable YAML is rejected' );
+    is( $config->last_save_error, 'invalid_yaml', 'unparseable YAML reports the invalid_yaml reason' );
+
+    is( $config->save( { config => "- a\n- b" } ), 0, 'YAML sequence is rejected' );
+    is( $config->last_save_error, 'not_a_mapping', 'YAML sequence reports the not_a_mapping reason' );
+
+    is( $config->save( { config => 'plain scalar' } ), 0, 'YAML scalar is rejected' );
+    is( $config->last_save_error, 'not_a_mapping', 'YAML scalar reports the not_a_mapping reason' );
+};
+
+subtest 'i18n keys used by the configure page exist in every language file' => sub {
+    my $tt = read_file("$Bin/../config.tt");
+    my $pm = read_file("$Bin/../../KSMessaging.pm");
+
+    # Collect the keys the template and the plugin reference.  The template
+    # looks most of them up dynamically via T.${message.key}, so scanning the
+    # source is the only way to catch a key that no language file defines.
+    my %keys;
+    $keys{$1} = 1 while $tt =~ /T\.config_(\d+)/g;
+    $keys{$1} = 1 while $pm =~ /'(config_\d+)'/g;
+
+    ok( scalar keys %keys, 'the configure page references i18n keys' );
+
+    for my $lang (qw(default.inc fi-FI.inc sv-SE.inc)) {
+        my $inc = read_file("$Bin/../i18n/$lang");
+        for my $key ( sort keys %keys ) {
+            like( $inc, qr/\Q$key\E\s*=/, "$lang defines $key" );
+        }
+    }
+};
+
+subtest 'configure page renders translated messages' => sub {
+
+    # The dynamic lookup T.${message.key} is easy to write as T.$message.key,
+    # which Template parses as a single variable and renders as an EMPTY div.
+    # That failure is silent, so render the real blocks and insist on text.
+    my $tt = read_file("$Bin/../config.tt");
+    my ($saved_block) = $tt =~ /(\[% IF saved %\].*?\[% END %\])/s;
+    my ($msg_block)   = $tt =~ /(\[% FOREACH message IN messages %\].*?\[% END %\])/s;
+    ok( $saved_block, 'config.tt has a success block' );
+    ok( $msg_block,   'config.tt has a messages block' );
+
+    my $block = $saved_block . "\n" . $msg_block;
+
+    for my $lang (qw(default fi-FI sv-SE)) {
+        my $snippet = read_file("$Bin/../i18n/$lang.inc") . "\n" . $block;
+
+        for my $key (qw(config_12 config_13 config_14 config_15 config_16)) {
+            my $out = '';
+            my $tpl = Template->new;
+            $tpl->process(
+                \$snippet,
+                {   saved   => 0,
+                    messages => [ { type => 'error', alert_class => 'danger', key => $key } ],
+                },
+                \$out
+            ) or die $tpl->error;
+
+            my ($text) = $out =~ m{<div class="alert alert-danger[^"]*">(.*?)</div>}s;
+            $text = '' unless defined $text;
+
+            ok( length $text, "$lang renders text for $key" );
+            isnt( $text, $key, "$lang does not fall back to the bare key $key" );
+        }
+
+        my $out = '';
+        my $tpl = Template->new;
+        $tpl->process( \$snippet, { saved => 1, messages => [] }, \$out ) or die $tpl->error;
+        my ($text) = $out =~ m{<div class="alert alert-success[^"]*">(.*?)</div>}s;
+        ok( length( $text // '' ), "$lang renders the success message" );
+    }
 };
 
 subtest 'getSuomiFiAltSender' => sub {
