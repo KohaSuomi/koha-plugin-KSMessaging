@@ -1,35 +1,390 @@
+**English** | [Suomi](README.fi.md)
 
 # Koha-Suomi plugin KSMessaging
 
-This is the plugin description
+KSMessaging sends notices from the Koha message queue to library patrons through
+Suomi.fi or iPost. Depending on how a branch is configured, a notice is either
 
-# Downloading
+- sent to the **Suomi.fi REST** interface, so the patron receives the message
+  electronically and/or on paper, and the library can follow the delivery status
+  through the API,
+- sent to **iPost as a PDF**, which is transferred to the print provider over
+  SFTP or FTP, or
+- written as an **iPost EPL** file and transferred to the print provider over
+  SFTP or FTP.
 
-From the release page you can download the latest \*.kpz file
+Letters that are queued for printing can also be re-routed through Suomi.fi
+without changing the letter selection, which is useful when the delivery channel
+changes for a period of time. The plugin is a Koha-Suomi port of Pate, and works
+on local Koha databases.
 
-# Installing
+Configuration is per branch: every library can have its own Suomi.fi account,
+iPost customer ID, staging directory and file transfer settings, with a shared
+`default` for the branches that do not need their own.
 
-Koha's Plugin System allows for you to add additional tools and reports to Koha that are specific to your library. Plugins are installed by uploading KPZ ( Koha Plugin Zip ) packages. A KPZ file is just a zip file containing the perl files, template files, and any other files necessary to make the plugin work.
+## Requirements
 
-The plugin system needs to be turned on by a system administrator.
+- Koha 25.05 or newer.
+- The Koha-Suomi **SsnProvider** plugin. The patron SSN is looked up with it when
+  a message is sent through Suomi.fi or iPost PDF. Without it, `pate.pl` does not
+  start.
+- Koha with the Koha-Suomi SFTP module (`C4::KohaSuomi::SFTP`). It is used for
+  the `sftp` file transfer protocol.
+- Memcached configured for Koha. Suomi.fi access tokens are cached under the
+  `cachekey` value from the configuration.
+- Perl modules: `Net::SFTP::Foreign`, `Net::FTP`, `PDF::API2`, `String::Random`,
+  `Text::Unaccent`, `YAML::XS`, `XML::Simple`, `File::Slurp`, `HTML::Template`,
+  `Archive::Zip` and `LWP::UserAgent`.
+- A staging directory that the `koha` user can write to, and a writable
+  `/var/spool/koha` for the Suomi.fi password backup.
 
-To set up the Koha plugin system you must first make some changes to your install.
+## Downloading
 
-    Change <enable_plugins>0<enable_plugins> to <enable_plugins>1</enable_plugins> in your koha-conf.xml file
-    Confirm that the path to <pluginsdir> exists, is correct, and is writable by the web server
-    Remember to allow access to plugin directory from Apache
+From the release page you can download the latest `*.kpz` file. A KPZ file is a
+zip file containing the Perl files, templates and other files the plugin needs.
 
-    <Directory <pluginsdir>>
-        Options Indexes FollowSymLinks
-        AllowOverride None
-        Require all granted
-    </Directory>
+## Installing
 
-    Restart your webserver
+### 1. Enable the Koha plugin system
 
-Once set up is complete you will need to alter your UseKohaPlugins system preference. On the Tools page you will see the Tools Plugins and on the Reports page you will see the Reports Plugins.
+If the plugin system is not already in use on this server:
 
-# Configuring
+- set `<enable_plugins>1</enable_plugins>` in `koha-conf.xml`
+- make sure the path in `<pluginsdir>` exists and is writable by the web server
+- allow access to the plugin directory in Apache:
 
-Here is the place for configurations
+      <Directory <pluginsdir>>
+          Options Indexes FollowSymLinks
+          AllowOverride None
+          Require all granted
+      </Directory>
 
+- restart the web server
+- set the `UseKohaPlugins` system preference to `Yes`
+
+The plugin system is documented in the plugin section of the Koha documentation.
+
+### 2. Install the plugin
+
+Upload the KPZ file in **Tools → Plugins → Upload plugin**.
+
+### 3. Run the one-time database setup
+
+The plugin adds no tables of its own and its `install` and `upgrade` hooks do
+nothing, so the database setup is a manual one-time step:
+
+    sudo -u koha perl <pluginsdir>/Koha/Plugin/Fi/KohaSuomi/KSMessaging/misc/set_suomifi_messaging.pl
+
+The script
+
+- adds the `suomifi` message transport type,
+- creates the `SuomiFiMessaging`, `SuomiFiAltSender` and `SuomiFiCostPool` system
+  preferences,
+- copies every `circulation` and `reserves` message transport to the new
+  `suomifi` transport type.
+
+The preference inserts can be repeated safely, but the message transports are
+copied unconditionally, so running the script twice creates duplicate transports
+for every letter. Run it once.
+
+The three `SuomiFi*` system preferences are legacy and are not read by the
+plugin: the sender addresses and the cost pool are configured on the plugin
+configuration page. Do not edit them.
+
+### 4. Choose the notices that go to Suomi.fi
+
+In **Administration → Message transports**, select the letters that should be
+sent through Suomi.fi under the `suomifi` transport type. The setup script copies
+the current print selections, so review them after the first install.
+
+Those selections are what put notices into the message queue with the `suomifi`
+transport type, and `pate.pl --suomifi` picks up exactly those pending notices.
+
+## Configuring
+
+The configuration is edited in **Tools → Plugins → KSMessaging → Configure**. The
+page has three YAML fields. Each field must contain a YAML mapping; an empty
+field, invalid YAML or YAML that is not a mapping is rejected with a message and
+nothing is saved.
+
+The values are stored in the `plugin_data` table of the database:
+
+| Plugin key | Configure page field | Contents |
+| --- | --- | --- |
+| `ksmessaging_config` | Configuration (YAML) | the main configuration |
+| `suomifi_alt_sender` | Suomifi alternative sender addresses (YAML) | sender block on the generated letter |
+| `suomifi_cost_pool` | Suomifi cost pool (YAML) | cost pool sent to Suomi.fi REST |
+
+The configuration in the YAML fields includes service credentials and is stored
+in plain text in the database. Restrict access to the database accordingly.
+
+### Main configuration
+
+The main configuration has two interfaces, `suomifi` and `letters`, each with its
+own `branches`. A message is always handled with the configuration of the
+patron's branch; if the branch has no section of its own, the `default` section
+is used.
+
+    suomifi:
+      branches:
+        default:
+          stagingdir: /tmp/ksmessaging
+          contact: kirjasto@example.fi
+          cachekey: ksmessaging_token
+          rest:
+            baseUrl: https://example.com/api
+            username: user
+            # The REST password is handled internally (change-suomifi-password.pl cronjob)
+            # and stored separately in plugin_data.
+            serviceid: service
+          ipostpdf:
+            customerid: customer
+            customerpass: secret
+            ovtid: OVT
+            senderid: sender
+            printprovider: provider
+            fileprefix: prefix
+
+    letters:
+      branches:
+        default:
+          stagingdir: /tmp/ksmessaging
+          contact: kirjasto@example.fi
+          ipostepl:
+            encoding: latin1
+            fileprefix: EPL
+            code: 123
+            header: Header
+            layout:
+              firstpage: 40
+              otherpages: 60
+              templatecode: 1
+              contpagecode: 2
+          ipostpdf:
+            customerid: customer
+            customerpass: secret
+            ovtid: OVT
+            senderid: sender
+            printprovider: provider
+            fileprefix: prefix
+          filetransfer:
+            host: ftp.example.com
+            port: 22
+            remotedir: /incoming
+            user: transfer
+            password: secret
+            protocol: sftp
+      skipletters: RETURN,OVERDUE
+      combineacrossbranches: no
+
+Common to all branch sections:
+
+| Key | Description |
+| --- | --- |
+| `stagingdir` | Directory where the letters are written before they are transferred. Created if it does not exist. |
+| `contact` | Contact address sent to Suomi.fi as the print service contact. |
+| `cachekey` | Memcached key used for the Suomi.fi access token. Give each branch its own key if the branches have different Suomi.fi accounts. |
+
+`suomifi` interface, used by `--suomifi`, `--letters-as-suomifi-ipost` and
+`--letters-as-suomifi-rest`:
+
+| Key | Description |
+| --- | --- |
+| `rest` | Suomi.fi REST account. `baseUrl` is the API base URL, `username` and `serviceid` identify the service. The password is not configured here, see [The Suomi.fi REST password](#the-suomifi-rest-password). |
+| `ipostpdf` | iPost customer. `customerid` and `customerpass` are the iPost credentials, `ovtid` the organisation, `senderid` the sender, `printprovider` the print provider added to the file name, and `fileprefix` the file name prefix. `senderid` is mandatory for iPost messages; the file name prefix defaults to it. |
+
+`letters` interface, used by `--letters`:
+
+| Key | Description |
+| --- | --- |
+| `ipostepl` | EPL output. `encoding` is `latin1` or `utf8`, `fileprefix` is prepended to the file name, and `code`, `header` and the `layout` values are written into the EPL template code (`templatecode`, `contpagecode`, `firstpage`, `otherpages`). |
+| `ipostpdf` | iPost customer, same keys as above. The letter is rendered as a PDF and zipped together with the iPost dispatch XML. |
+| `filetransfer` | Where the files are sent. `protocol` is `sftp` or `ftp`, `port` defaults to 22 or 21, and `remotedir` defaults to `~`. If `filetransfer` is missing, the letter is only written to `stagingdir` and the message is still marked as sent. |
+
+At the `letters` level, next to `branches`:
+
+| Key | Description |
+| --- | --- |
+| `skipletters` | Comma-separated letter codes that are not processed, for example `RETURN,OVERDUE`. |
+| `combineacrossbranches` | `yes` transfers every file with the `default` file transfer configuration. Otherwise a branch with its own `filetransfer` section transfers with its own settings. |
+
+### The Suomi.fi REST password
+
+The REST password is not part of the YAML configuration and there is no password
+field on the configuration page. It is stored in `plugin_data` under
+`suomifi_rest_password_<BRANCHCODE>` and is only written by
+`change-suomifi-password.pl --write_config`, once per branch.
+
+Before the first password change, the `rest.password` value in the YAML is used
+as a fallback. That is the bootstrap path: put the current password in the YAML,
+run the password change once with `--write_config`, and the stored password takes
+over. The password can also be kept in the `<ksmessaging>` section of
+`koha-conf.xml` when the configuration is not stored in `plugin_data`.
+
+### Alternative sender addresses
+
+By default the generated letter shows the branch name, address, zip code, city
+and phone number as the sender. Up to four lines can be shown instead:
+
+    fi-FI:
+      BRANCH:
+        - Erikoiskirjasto
+    en:
+      - Library
+    sv-SE:
+      - Biblioteken
+    default:
+      - Kirjasto
+      - Katu 1
+      - 0000 Kaupunki
+      - Puh. 0501111111
+
+The first match wins: the patron's language and the branch, the patron's
+language with a partial branch code, the branch without a language, and finally
+the `default` section. A language section may also be a list without branches, as
+in `en:` above, in which case it is used for that language in every branch.
+
+### Cost pool
+
+The cost pool is added to the paper mail part of the Suomi.fi REST message:
+
+    KOHAPK: KOHA1234
+    TU: TU23456
+
+The branch code is matched exactly or as a part of the patron's branch code, and
+the value must consist of 1 to 15 uppercase letters or digits. There is no
+`default` fallback: a branch without a matching entry is sent without a cost
+pool.
+
+### Fallback: koha-conf.xml
+
+If nothing is stored in `plugin_data`, the plugin reads the same YAML structure
+from a `<ksmessaging>` section in `koha-conf.xml`:
+
+    <ksmessaging><![CDATA[
+    suomifi:
+      branches:
+        default:
+          ...
+    ]]></ksmessaging>
+
+This is only a fallback. The configuration page is the recommended place, since
+it validates the YAML and keeps all three settings in one place.
+
+## Sending messages
+
+The plugin does not register a Koha cron job. The scripts in
+`KSMessaging/cronjobs/` are run by the administrator, as the `koha` user, in an
+environment where `KOHA_CONF` points to the site configuration and Koha's Perl
+libraries are on `PERL5LIB`. `pate.pl` adds the plugin directory to `@INC` itself;
+`change-suomifi-password.pl` and `suomifi-status.pl` do not, so `<pluginsdir>`
+has to be on `PERL5LIB` for those two. All three take `--help`.
+
+The scripts are normally installed under `<pluginsdir>`, for example:
+
+    sudo -u koha env KOHA_CONF=/etc/koha/sites/<site>/koha-conf.xml \
+        PERL5LIB=<koha perl library directory>:<pluginsdir> \
+        perl <pluginsdir>/Koha/Plugin/Fi/KohaSuomi/KSMessaging/cronjobs/pate.pl --suomifi
+
+Run each mode on its own schedule, since one run handles one interface only.
+
+### pate.pl
+
+Exactly one mode must be given per run:
+
+| Option | Messages handled | What it does |
+| --- | --- | --- |
+| `--suomifi` | pending notices with the `suomifi` transport type | Sends to Suomi.fi REST if the branch has a `rest` section, otherwise sends as iPost PDF if the branch has an `ipostpdf` section. The patron SSN is required for iPost PDF; without it the notice is marked failed and the run continues. |
+| `--letters-as-suomifi-ipost` | pending print notices | Renders the notice as a PDF, packages it with the iPost dispatch XML and transfers it to the print provider. |
+| `--letters-as-suomifi-rest` | pending print notices | Renders the notice as a PDF, uploads it to Suomi.fi and sends the electronic and paper mail message through the REST API. |
+| `--letters` | pending print notices | Writes the notice as an EPL file if the branch has an `ipostepl` section, or as a zip of the PDF and the iPost dispatch XML if it has an `ipostpdf` section, and then transfers the file to the print provider. |
+
+`--letters-as-suomifi-ipost` and `--letters-as-suomifi-rest` use the Suomi.fi
+section of the branch, so the Suomi.fi or iPost account belongs under
+`suomifi`, not under `letters`.
+
+The files are written to the `stagingdir` of the branch:
+`<branchcode>-<message_id>.epl` or `<branchcode>-<message_id>.zip` with
+`--letters`, and `<fileprefix>_<timestamp>.pdf` or
+`<fileprefix>_<timestamp>.zip` in the Suomi.fi modes. The file name prefix
+defaults to the iPost `senderid`, a zip archive gets `_suoratulostus` appended
+when the patron has no SSN, and `_printprovider` when a print provider is
+configured.
+
+Other options:
+
+| Option | Description |
+| --- | --- |
+| `--messages=234,2345` | Process only the given message IDs, whatever their transport type or status. Useful for testing. |
+| `--test-id=TESTIHETU` | Use this SSN instead of looking up the patron's, for testing. |
+| `--help`, `-h` | Usage. |
+
+The script marks each processed notice as `sent` or `failed`, counts the
+undelivered ones, waits a second between messages and prints
+`N messages processed, M undelivered.` on standard error. It exits with 1 if any
+message was undelivered and 0 otherwise, so a cron job can use the exit status
+for monitoring.
+
+Set `DEBUG=1` in the environment to get the resolved branch configuration and the
+generated letters or dispatch XML on standard error.
+
+### change-suomifi-password.pl
+
+Rotates the Suomi.fi REST password of one branch and stores the new password in
+`plugin_data`.
+
+| Option | Description |
+| --- | --- |
+| `--branchcode=BRANCHCODE` | Branch whose REST account and stored password are used. Defaults to `default`. |
+| `--old_password=OLD_PASSWORD` | Use this password instead of the stored one. |
+| `--write_config` | Store the new password in `plugin_data` under `suomifi_rest_password_<BRANCHCODE>`. Without it the password is changed in Suomi.fi but not stored, and the plugin keeps using the old one. |
+| `--backup=BACKUP` | File to write the new password to before the change. Defaults to `/var/spool/koha/suomifi_password_backup.txt`, or `/var/spool/koha/suomifi_password_backup_<BRANCHCODE>.txt` for any other branch. |
+| `--test_password` | Only check that the current password is accepted, then exit without changing anything. |
+| `--verbose`, `-v` | Print timestamps and progress. |
+
+The new password is always written to the backup file before the change is
+attempted, unless `--test_password` is given, so the password can be recovered if
+the change fails.
+
+Run the script once per branch with `--write_config` after the initial
+configuration, so that the password in `plugin_data` is in use.
+
+### suomifi-status.pl
+
+Reads the delivery status of already sent messages from the Suomi.fi REST API and
+prints the electronic and paper mail status lines with their timestamps. It makes
+no changes.
+
+    perl <pluginsdir>/Koha/Plugin/Fi/KohaSuomi/KSMessaging/cronjobs/suomifi-status.pl \
+        --date=2026-01-31 --message_id=1234
+
+| Option | Description |
+| --- | --- |
+| `--date=YYYY-MM-DD` | Look at messages updated on or after this date. Defaults to today. |
+| `--message_id=MESSAGE_ID` | Look at one message instead. |
+
+The file is not executable in the repository, so run it with `perl`. Only notices
+with the `print` transport type and the status `sent` are inspected.
+
+## Troubleshooting
+
+- `No configuration found for ksmessaging.` — nothing is stored in
+  `plugin_data` and there is no `<ksmessaging>` section in `koha-conf.xml`. Save
+  the configuration on the plugin configuration page.
+- `The format for the branch is not configured.` — the branch has neither a
+  `rest` nor an `ipostpdf` section under `suomifi`.
+- `No suomi.fi message created ... No SSN available.` — SsnProvider has no SSN
+  for the patron. A notice sent through iPost PDF needs one.
+- Notices stay `pending` — the mode that handles their transport type is not
+  being run, or the run failed before it reached them.
+- `Can't create directory` or `Can't write to` — `stagingdir` does not exist and
+  cannot be created by the `koha` user, or is not writable.
+- `Unknown protocol` — `filetransfer.protocol` is neither `sftp` nor `ftp`.
+- Repeated token requests or token errors — check that memcached is running for
+  Koha and that `cachekey` is set and unique per Suomi.fi account.
+- The plugin may be listed as **KSMessaging: Pate**. That is the plugin's
+  display name, it is the same plugin.
+- The recipient and sender country is sent as an ISO 3166-1 alpha-2 code. Only
+  the country names Sweden, Norway and Denmark (in Finnish, Swedish and English)
+  are recognised, so a country field holding an ISO code such as `SE` is sent as
+  `FI`, as is any unrecognised value.
