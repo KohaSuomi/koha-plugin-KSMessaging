@@ -111,6 +111,8 @@ sub configure {
 
     # Show the stored configuration until we know we are handling a submission
     my $config_for_display = $config->loadedConfigForDisplay;
+    my $suomifi_alt_sender_for_display = $config->loadedAltSenderForDisplay;
+    my $suomifi_cost_pool_for_display = $config->loadedCostPoolForDisplay;
 
     # Save the configuration if the admin pressed "Save"
     if ( $cgi->request_method eq 'POST' && $cgi->param('save') ) {
@@ -118,9 +120,12 @@ sub configure {
         # Show what the admin actually submitted, so a failed save does not
         # throw away the configuration they just typed in
         $config_for_display = $cgi->param('config') || '';
+        $suomifi_alt_sender_for_display = $cgi->param('suomifi_alt_sender') || '';
+        $suomifi_cost_pool_for_display = $cgi->param('suomifi_cost_pool') || '';
+
 
         if ( !$self->_csrf_token_valid($cgi) ) {
-            push @messages, $self->_configure_message( error => 'config_16' );
+            push @messages, $self->_configure_message( error => 'config_18' );
         }
         elsif ( $config->save($cgi) ) {
             $saved = 1;
@@ -133,6 +138,8 @@ sub configure {
 
     return $self->_output_configure_page(
         config  => $config_for_display,
+        suomifi_alt_sender => $suomifi_alt_sender_for_display,
+        suomifi_cost_pool => $suomifi_cost_pool_for_display,
         messages => \@messages,
         saved   => $saved,
     );
@@ -146,6 +153,8 @@ sub _output_configure_page {
     my $template = $self->get_template( { file => 'config.tt' } );
     $template->param(
         config   => $params{config},
+        suomifi_alt_sender => $params{suomifi_alt_sender},
+        suomifi_cost_pool => $params{suomifi_cost_pool},
         messages => $params{messages},
         saved    => $params{saved},
     );
@@ -169,11 +178,11 @@ sub _configure_message {
 sub _save_error_key {
     my ( $self, $reason ) = @_;
 
-    return 'config_13' if $reason eq 'empty';
-    return 'config_14' if $reason eq 'invalid_yaml';
-    return 'config_15' if $reason eq 'not_a_mapping';
+    return 'config_15' if $reason eq 'empty';
+    return 'config_16' if $reason eq 'invalid_yaml';
+    return 'config_17' if $reason eq 'not_a_mapping';
 
-    return 'config_12';
+    return 'config_14'; # Unknown reason, just show a generic error message
 }
 
 sub _csrf_token_valid {

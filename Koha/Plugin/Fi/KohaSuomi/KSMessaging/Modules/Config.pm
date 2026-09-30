@@ -133,7 +133,7 @@ sub getFileTransferConfig {
 }
 
 ############################################################
-## Configuration page support (BroadcastBiblios style)
+## Configuration page support
 ############################################################
 
 ## Load the stored config for display on the configure page.  If nothing is
@@ -142,12 +142,24 @@ sub getFileTransferConfig {
 sub load_for_configure {
     my ($self) = @_;
     $self->{config_for_display} = $self->_load_plugin_config;
+    $self->{suomifi_alt_sender_for_display} = $self->_load_suomifi_alt_sender;
+    $self->{suomifi_cost_pool_for_display} = $self->_load_suomifi_cost_pool;
     return $self;
 }
 
 sub loadedConfigForDisplay {
     my ($self) = @_;
     return $self->{config_for_display} || '';
+}
+
+sub loadedAltSenderForDisplay {
+    my ($self) = @_;
+    return $self->{suomifi_alt_sender_for_display} || '';
+}
+
+sub loadedCostPoolForDisplay {
+    my ($self) = @_;
+    return $self->{suomifi_cost_pool_for_display} || '';
 }
 
 ## Save the configuration from the configure page into plugin_data.
@@ -159,12 +171,18 @@ sub save {
     my ($self, $args) = @_;
 
     my $config;
+    my $suomifi_alt_sender;
+    my $suomifi_cost_pool;
 
     if ( ref $args eq 'CGI' ) {
         $config = $args->param('config') || '';
+        $suomifi_alt_sender = $args->param('suomifi_alt_sender') || '';
+        $suomifi_cost_pool = $args->param('suomifi_cost_pool') || '';
     }
     else {
         $config = $args->{config} || '';
+        $suomifi_alt_sender = $args->{suomifi_alt_sender} || '';
+        $suomifi_cost_pool = $args->{suomifi_cost_pool} || '';
     }
 
     $self->{last_save_error} = undef;
@@ -174,18 +192,25 @@ sub save {
         return 0;
     }
 
-    # Validate that the config is a valid YAML mapping before storing
-    my $parsed = eval { YAML::XS::Load($config) };
-    if ($@) {
-        $self->{last_save_error} = 'invalid_yaml';
-        return 0;
-    }
-    if ( ref($parsed) ne 'HASH' ) {
-        $self->{last_save_error} = 'not_a_mapping';
-        return 0;
+    # Validate that the configurations are valid YAML and a hashref.  If not, return an error code.
+    for my $yaml ($config, $suomifi_alt_sender, $suomifi_cost_pool) {
+        if (!$yaml) {
+            next; # Skip empty values, they are allowed
+        }
+        my $parsed = eval { YAML::XS::Load($yaml) };
+        if ($@) {
+            $self->{last_save_error} = 'invalid_yaml';
+            return 0;
+        }
+        if ( ref($parsed) ne 'HASH' ) {
+            $self->{last_save_error} = 'not_a_mapping';
+            return 0;
+        }
     }
 
     $self->_store_plugin_data( 'ksmessaging_config', $config );
+    $self->_store_plugin_data( 'suomifi_alt_sender', $suomifi_alt_sender );
+    $self->_store_plugin_data( 'suomifi_cost_pool', $suomifi_cost_pool );
 
     return 1;
 }
@@ -225,9 +250,22 @@ sub _load_plugin_config {
     return $row;
 }
 
+sub _load_suomifi_alt_sender {
+    my ($self) = @_;
+    my $row = $self->_get_plugin_data('suomifi_alt_sender');
+    return $row;
+}
+
+sub _load_suomifi_cost_pool {
+    my ($self) = @_;
+    my $row = $self->_get_plugin_data('suomifi_cost_pool');
+    return $row;
+}
+
 sub _load_plugin_password {
     my ($self) = @_;
-    my $row = $self->_get_plugin_data('suomifi_rest_password');
+    my $branch = $self->branch;
+    my $row = $self->_get_plugin_data("suomifi_rest_password_$branch");
     return $row;
 }
 
@@ -242,7 +280,8 @@ sub store_password {
          VALUES (?, ?, ?)
          ON DUPLICATE KEY UPDATE plugin_value = VALUES(plugin_value)"
     );
-    $sth->execute( $self->_plugin_class, 'suomifi_rest_password', $password );
+    my $branch = $self->branch;
+    $sth->execute( $self->_plugin_class, "suomifi_rest_password_$branch", $password );
     return $dbh->rows;
 }
 
@@ -279,7 +318,7 @@ sub getSuomiFiAltSender {
     my ($self, $lang) = @_;
 
     my $library_id = $self->{branch};
-    my $config = C4::Context->preference('SuomiFiAltSender');
+    my $config = $self->_load_suomifi_alt_sender() || C4::Context->preference('SuomiFiAltSender');
 
     return unless $config;
     my $encoded_config = encode('UTF-8', $config);
@@ -333,7 +372,7 @@ sub getSuomiFiCostPool {
     my ($self) = @_;
 
     my $library_id = $self->{branch};
-    my $config = C4::Context->preference('SuomiFiCostPool');
+    my $config = $self->_load_suomifi_cost_pool() || C4::Context->preference('SuomiFiCostPool');
 
     return unless $config;
 

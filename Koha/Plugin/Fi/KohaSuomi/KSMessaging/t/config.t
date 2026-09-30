@@ -131,9 +131,13 @@ subtest 'save' => sub {
     is( scalar @stored, 0, 'nothing stored on failure' );
 
     ok( $config->save( { config => "a: 1\nb: 2" } ), 'valid YAML saves ok' );
-    is( scalar @stored, 1, 'one store call for config' );
+    is( scalar @stored, 3, 'one store call per configuration' );
     is( $stored[0]->{key}, 'ksmessaging_config', 'stores under ksmessaging_config' );
     is( $stored[0]->{value}, "a: 1\nb: 2", 'stores the config text' );
+    is( $stored[1]->{key}, 'suomifi_alt_sender', 'alt sender stored under its own key' );
+    is( $stored[2]->{key}, 'suomifi_cost_pool',  'cost pool stored under its own key' );
+    is( $stored[1]->{value}, '', 'a blank alt sender is stored as an empty string' );
+    is( $stored[2]->{value}, '', 'a blank cost pool is stored as an empty string' );
 
     @stored = ();
     ok( $config->save( { config => "a: 1", password => 'secret' } ), 'config with an extra password argument saves' );
@@ -142,9 +146,16 @@ subtest 'save' => sub {
     # change-suomifi-password cronjob through store_password(), and keeping it
     # out of the stored config stops it being echoed back in the plaintext
     # textarea that the configure form renders.
-    is( scalar @stored, 1, 'only the config is stored, the password is ignored' );
+    is( scalar @stored, 3, 'the three configurations are stored and the password is not among them' );
     is( $stored[0]->{key},   'ksmessaging_config', 'still stored under ksmessaging_config' );
     is( $stored[0]->{value}, "a: 1",               'stored config text is unaffected by the password' );
+
+    @stored = ();
+    ok( $config->save( { config => "a: 1", suomifi_alt_sender => "fi-FI:\n  KOHAPK:\n    - Kirjasto\n", suomifi_cost_pool => "KOHAPK: KL001\n" } ),
+        'alt sender and cost pool save ok' );
+    is( scalar @stored, 3, 'all three configurations stored' );
+    is( $stored[1]->{value}, "fi-FI:\n  KOHAPK:\n    - Kirjasto\n", 'alt sender text stored verbatim' );
+    is( $stored[2]->{value}, "KOHAPK: KL001\n", 'cost pool text stored verbatim' );
 };
 
 subtest 'save via CGI object' => sub {
@@ -165,11 +176,22 @@ subtest 'save via CGI object' => sub {
     ok( $config->save($fake_cgi), 'CGI object saved' );
     is( $stored[0]->{key},   'ksmessaging_config', 'CGI branch stores config' );
     is( $stored[0]->{value}, "a: 1",               'CGI branch config value' );
-    is( scalar @stored, 1, 'CGI branch ignores a password parameter' );
+    is( scalar @stored, 3, 'CGI branch also stores the two SuomiFi configurations' );
+    is( $stored[1]->{key}, 'suomifi_alt_sender', 'CGI branch stores the alt sender' );
+    is( $stored[2]->{key}, 'suomifi_cost_pool',  'CGI branch stores the cost pool' );
+    is( $stored[1]->{value}, '', 'an absent alt sender parameter stores an empty string' );
+    is( $stored[2]->{value}, '', 'an absent cost pool parameter stores an empty string' );
+
+    @stored = ();
+    my $full_cgi = bless { config => "a: 1", suomifi_alt_sender => "fi-FI:\n  KOHAPK:\n    - Kirjasto\n", suomifi_cost_pool => "KOHAPK: KL001\n" }, 'CGI';
+    ok( $config->save($full_cgi), 'CGI object carrying the SuomiFi fields saved' );
+    is( scalar @stored, 3, 'all three configurations stored from CGI' );
+    is( $stored[1]->{value}, "fi-FI:\n  KOHAPK:\n    - Kirjasto\n", 'CGI alt sender value' );
+    is( $stored[2]->{value}, "KOHAPK: KL001\n", 'CGI cost pool value' );
 };
 
 subtest 'REST password is stored separately from the config' => sub {
-    my $config = $ConfigClass->new( {} );
+    my $config = $ConfigClass->new( {branch => 'default'} );
 
     # store_password is reached only from the change-suomifi-password cronjob.
     # It refuses empty input before ever touching the database.
@@ -185,7 +207,7 @@ subtest 'REST password is stored separately from the config' => sub {
     );
 
     is( $config->_load_plugin_password, 'secret', 'the stored password is read back' );
-    is( $requested[0], 'suomifi_rest_password', 'read from the suomifi_rest_password key' );
+    is( $requested[0], 'suomifi_rest_password_default', 'read from the suomifi_rest_password_default key' );
 
     # getRESTConfig prefers the separately stored password, and falls back to
     # the password held in the YAML / koha-conf config when none is stored.
@@ -229,7 +251,7 @@ subtest 'save validation' => sub {
 
     @stored = ();
     $config->save( { config => "a: 1" } );
-    is( scalar @stored, 1, 'accepted mapping is still stored' );
+    is( scalar @stored, 3, 'accepted mapping is still stored' );
 };
 
 subtest 'save error reasons' => sub {
@@ -252,6 +274,18 @@ subtest 'save error reasons' => sub {
 
     is( $config->save( { config => 'plain scalar' } ), 0, 'YAML scalar is rejected' );
     is( $config->last_save_error, 'not_a_mapping', 'YAML scalar reports the not_a_mapping reason' );
+
+    is( $config->save( { config => "a: 1", suomifi_alt_sender => "foo: [broken" } ), 0,
+        'unparseable alt sender YAML is rejected' );
+    is( $config->last_save_error, 'invalid_yaml', 'unparseable alt sender reports the invalid_yaml reason' );
+
+    is( $config->save( { config => "a: 1", suomifi_cost_pool => "- a\n- b" } ), 0,
+        'a YAML sequence as a cost pool is rejected' );
+    is( $config->last_save_error, 'not_a_mapping', 'cost pool sequence reports the not_a_mapping reason' );
+
+    is( $config->save( { config => "a: 1", suomifi_alt_sender => '', suomifi_cost_pool => '' } ), 1,
+        'blank SuomiFi fields are accepted alongside a valid config' );
+    is( $config->last_save_error, undef, 'no error recorded when the SuomiFi fields are blank' );
 };
 
 subtest 'i18n keys used by the configure page exist in every language file' => sub {
@@ -291,7 +325,7 @@ subtest 'configure page renders translated messages' => sub {
     for my $lang (qw(default fi-FI sv-SE)) {
         my $snippet = read_file("$Bin/../i18n/$lang.inc") . "\n" . $block;
 
-        for my $key (qw(config_12 config_13 config_14 config_15 config_16)) {
+        for my $key (qw(config_14 config_15 config_16 config_17 config_18)) {
             my $out = '';
             my $tpl = Template->new;
             $tpl->process(
@@ -319,70 +353,126 @@ subtest 'configure page renders translated messages' => sub {
 
 subtest 'getSuomiFiAltSender' => sub {
     my $pref;
+    my $stored;
     my $context_mock = Test::MockModule->new('C4::Context');
     $context_mock->mock( 'preference', sub { return $pref } );
+    my $config_mock = Test::MockModule->new($ConfigClass);
+    $config_mock->mock( '_load_suomifi_alt_sender', sub { return $stored } );
 
     my $config = $ConfigClass->new( { branch => 'lib1' } );
 
-    $pref = undef;
-    is( $config->getSuomiFiAltSender('fi'), undef, 'undef preference returns undef' );
+    $pref   = undef;
+    $stored = undef;
+    is( $config->getSuomiFiAltSender('fi-FI'), undef, 'undef preference returns undef' );
 
-    $pref = "fi:\n  lib1: \"Kirjasto A\"\n  default: \"Kirjasto D\"\nen:\n  lib1: \"Library E\"\n";
-    is( $config->getSuomiFiAltSender('fi'), 'Kirjasto A', 'language section + branch match' );
+    $stored = "fi-FI:\n  lib1:\n    - Kirjasto A\nen:\n  lib1:\n    - Library E\n";
+    is_deeply( $config->getSuomiFiAltSender('fi-FI'), ['Kirjasto A'], 'language section + branch match' );
+    is_deeply( $config->getSuomiFiAltSender('en'),     ['Library E'], 'a second language section is matched' );
 
-    $pref = "lib1: \"Direct\"\ndefault: \"Def\"\n";
-    is( $config->getSuomiFiAltSender(undef), 'Direct', 'direct branch section match without lang' );
+    $stored = "fi-FI:\n  lib1:\n    - Kirjasto A\n";
+    is_deeply( $config->getSuomiFiAltSender('fi-FI'), ['Kirjasto A'], 'a one row alt sender is returned as stored' );
 
-    $pref = "default: \"Def\"\n";
-    is( $config->getSuomiFiAltSender('fi'), 'Def', 'default section fallback' );
+    $stored = "lib1:\n  - Direct\ndefault:\n  - Def\n";
+    is_deeply( $config->getSuomiFiAltSender(undef), ['Direct'], 'direct branch section match without lang' );
 
+    $stored = "default:\n  - Def\n";
+    is_deeply( $config->getSuomiFiAltSender('fi-FI'), ['Def'], 'default section fallback' );
+
+    # The stored configuration is preferred over the system preference, and an
+    # empty stored value falls back to it, which is what save() writes when the
+    # admin leaves the field blank.
+    $stored = "fi-FI:\n  lib1:\n    - From plugin_data\n";
+    $pref   = "fi-FI:\n  lib1:\n    - From preference\n";
+    is_deeply( $config->getSuomiFiAltSender('fi-FI'), ['From plugin_data'],
+        'the stored alt sender takes precedence over the system preference' );
+
+    $stored = '';
+    is_deeply( $config->getSuomiFiAltSender('fi-FI'), ['From preference'],
+        'an empty stored alt sender falls back to the system preference' );
+
+    $stored = undef;
+    is_deeply( $config->getSuomiFiAltSender('fi-FI'), ['From preference'],
+        'a missing stored alt sender falls back to the system preference' );
+
+    $stored = undef;
+    $pref   = undef;
     local *STDOUT;
     open STDOUT, '>', '/dev/null' or die $!;
-    $pref = "foo: [broken";
-    is( $config->getSuomiFiAltSender('fi'), undef, 'invalid YAML returns undef' );
+    $stored = "foo: [broken";
+    is( $config->getSuomiFiAltSender('fi-FI'), undef, 'invalid YAML returns undef' );
 
-    $pref = "- just\n- a\n- list\n";
-    is( $config->getSuomiFiAltSender('fi'), undef, 'non-hash YAML returns undef' );
+    $stored = "- just\n- a\n- list\n";
+    is( $config->getSuomiFiAltSender('fi-FI'), undef, 'non-hash YAML returns undef' );
 
-    $pref = "other: 1\n";
-    is( $config->getSuomiFiAltSender('fi'), undef, 'no matching branch returns undef' );
+    $stored = "other:\n  - Nope\n";
+    is( $config->getSuomiFiAltSender('fi-FI'), undef, 'no matching branch returns undef' );
 };
 
 subtest 'getSuomiFiCostPool' => sub {
     my $pref;
+    my $stored;
     my $context_mock = Test::MockModule->new('C4::Context');
     $context_mock->mock( 'preference', sub { return $pref } );
+    my $config_mock = Test::MockModule->new($ConfigClass);
+    $config_mock->mock( '_load_suomifi_cost_pool', sub { return $stored } );
 
     my $config = $ConfigClass->new( { branch => 'lib1' } );
 
-    $pref = undef;
+    $pref   = undef;
+    $stored = undef;
     is( $config->getSuomiFiCostPool, undef, 'undef preference returns undef' );
 
-    $pref = "lib1: KL001\n";
+    $stored = "lib1: KL001\n";
     is( $config->getSuomiFiCostPool, 'KL001', 'valid cost pool returned' );
 
-    $pref = "lib1: bad value\n";
+    $stored = "lib1: bad value\n";
     is( $config->getSuomiFiCostPool, undef, 'invalid cost pool value returns undef' );
 
-    $pref = "lib1: 123ABC\n";
+    $stored = "lib1: 123ABC\n";
     is( $config->getSuomiFiCostPool, '123ABC', 'numeric cost pool returned' );
 
-    $pref = "other: KL099\n";
+    $stored = "other: KL099\n";
     is( $config->getSuomiFiCostPool, undef, 'no matching branch returns undef' );
 
+    # The stored cost pool is preferred over the system preference, and an empty
+    # stored value falls back to it.
+    $stored = "lib1: KLSTORED\n";
+    $pref   = "lib1: KLPREF\n";
+    is( $config->getSuomiFiCostPool, 'KLSTORED', 'the stored cost pool takes precedence over the system preference' );
+
+    $stored = '';
+    is( $config->getSuomiFiCostPool, 'KLPREF', 'an empty stored cost pool falls back to the system preference' );
+
+    $stored = undef;
+    is( $config->getSuomiFiCostPool, 'KLPREF', 'a missing stored cost pool falls back to the system preference' );
+
+    $stored = undef;
+    $pref   = undef;
     local *STDOUT;
     open STDOUT, '>', '/dev/null' or die $!;
-    $pref = "foo: [broken";
+    $stored = "foo: [broken";
     is( $config->getSuomiFiCostPool, undef, 'invalid YAML returns undef' );
 };
 
 subtest 'load_for_configure' => sub {
     my $config_mock = Test::MockModule->new($ConfigClass);
-    $config_mock->mock( '_load_plugin_config',   sub { return "config:\n  a: 1\n" } );
+    $config_mock->mock( '_load_plugin_config',       sub { return "config:\n  a: 1\n" } );
+    $config_mock->mock( '_load_suomifi_alt_sender',  sub { return "fi-FI:\n  KOHAPK:\n    - Kirjasto\n" } );
+    $config_mock->mock( '_load_suomifi_cost_pool',   sub { return "KOHAPK: KL001\n" } );
 
     my $config = $ConfigClass->new( {} );
     $config->load_for_configure;
-    is( $config->loadedConfigForDisplay,   "config:\n  a: 1\n", 'config exposed for display' );
+    is( $config->loadedConfigForDisplay,  "config:\n  a: 1\n", 'config exposed for display' );
+    is( $config->loadedAltSenderForDisplay, "fi-FI:\n  KOHAPK:\n    - Kirjasto\n", 'alt sender exposed for display' );
+    is( $config->loadedCostPoolForDisplay,  "KOHAPK: KL001\n", 'cost pool exposed for display' );
+
+    $config_mock->mock( '_load_suomifi_alt_sender', sub { return undef } );
+    $config_mock->mock( '_load_suomifi_cost_pool',  sub { return undef } );
+
+    my $empty = $ConfigClass->new( {} );
+    $empty->load_for_configure;
+    is( $empty->loadedAltSenderForDisplay, '', 'a missing alt sender is exposed as an empty string' );
+    is( $empty->loadedCostPoolForDisplay,  '', 'a missing cost pool is exposed as an empty string' );
 };
 
 done_testing;
