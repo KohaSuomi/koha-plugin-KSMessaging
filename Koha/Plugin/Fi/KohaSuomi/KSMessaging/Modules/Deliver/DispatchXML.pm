@@ -18,11 +18,11 @@ use HTML::Template;
 
 ## Resolve the plugin Templates directory from the installed bundle.  The
 ## module lives in <pluginsdir>/Koha/Plugin/Fi/KohaSuomi/KSMessaging/Modules/
-## Deliver/, so the plugin root is four directories up.
+## Deliver/, so the plugin root (and its Templates/ dir) is two directories up.
 sub _template_dir {
     my $module_file = $INC{'Koha/Plugin/Fi/KohaSuomi/KSMessaging/Modules/Deliver/DispatchXML.pm'}
         || rel2abs(__FILE__);
-    return catdir( dirname( rel2abs($module_file) ), '..', '..', '..', '..', 'Templates' );
+    return catdir( dirname( rel2abs($module_file) ), '..', '..', 'Templates' );
 }
 
 sub GetDispatcherConfig {

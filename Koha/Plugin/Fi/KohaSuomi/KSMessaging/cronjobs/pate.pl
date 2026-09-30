@@ -10,8 +10,11 @@ use Getopt::Long qw( GetOptions );
 use C4::Context;
 use Try::Tiny;
 
-my $pluginsdir = C4::Context->config("pluginsdir");
-use lib $pluginsdir;
+BEGIN {
+    # Add the Koha plugins directory so the plugin modules below can be
+    # loaded when this script is executed outside of a Koha web request.
+    push @INC, C4::Context->config("pluginsdir") if C4::Context->config("pluginsdir");
+}
 
 use Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Config;
 use Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::SendMessages;
@@ -341,8 +344,8 @@ elsif ( $print_letters ) {
 }
 
 print STDERR "\n" . $letters . " messages processed, " . $undelivered . " undelivered.\n";
-exit 0 if $undelivered > 0;
-exit 1;
+exit 1 if $undelivered > 0;
+exit 0;
 
 sub skip_letters {
     my $message = shift;
