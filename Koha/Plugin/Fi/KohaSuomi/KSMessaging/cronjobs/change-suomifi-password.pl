@@ -32,12 +32,19 @@ GetOptions(
     'test_password' => \$test_password
 );
 
+# The password is stored per branch, so keep one backup file per branch and a
+# run for one branch cannot overwrite another branch's recovery file.  The
+# default branch keeps the original name.
+my $default_backup = $branchcode eq 'default'
+    ? '/var/spool/koha/suomifi_password_backup.txt'
+    : "/var/spool/koha/suomifi_password_backup_$branchcode.txt";
+
 if ($help) {
     print "Usage: $0 [--branchcode=BRANCHCODE] [--old_password=OLD_PASSWORD] [--write_config] [--backup=BACKUP] [--test_password]\n";
-    print "--branchcode: Specify the branch code (default: 'default')\n";
+    print "--branchcode: Branch whose REST account and stored password are used (default: 'default')\n";
     print "--old_password: Provide the old password if you want to test it before changing\n";
     print "--write_config: If set, the new password will be written to the config file\n";
-    print "--backup: Specify a file to back up the new password (default: /var/spool/koha/suomifi_password_backup.txt)\n";
+    print "--backup: Specify a file to back up the new password (default: $default_backup)\n";
     print "--test_password: If set, the script will only test the old password without changing it\n";
     exit 0;
 }
@@ -59,7 +66,7 @@ my $new_password = generate_password();
 
 unless ($test_password) {
     # Save the new password to a backup file before proceeding
-    my $backup_file = $backup || "/var/spool/koha/suomifi_password_backup.txt";
+    my $backup_file = $backup || $default_backup;
     open my $fh, '>', $backup_file or die "Could not open $backup_file for writing: $!";
     print $fh "$new_password\n" if $fh;
     close $fh if $fh;
@@ -88,10 +95,10 @@ try {
     print "Password changed to $new_password\n" if $verbose;
     if ($write_config) {
         $config->store_password($new_password);
-        print "Password stored in plugin_data (suomifi_rest_password).\n";
+        print "Password stored in plugin_data (suomifi_rest_password_$branchcode).\n";
     } else {
         print "Not storing in plugin_data, use --write_config to enable this.\n";
-        print "Add the new password via the plugin configuration page or --write_config.\n";
+        print "There is no password field on the plugin configuration page, so --write_config is the only way to store it.\n";
     }
     $cache->clear_from_cache($config->cacheKey());
 } catch {

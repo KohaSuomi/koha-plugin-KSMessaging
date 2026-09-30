@@ -17,8 +17,8 @@ our $VERSION = "1.0.0";
 
 ## Load the config. The config is stored in the plugin_data table (key
 ## 'ksmessaging_config') and the REST password separately (key
-## 'suomifi_rest_password').  If there is no configuration stored in
-## plugin_data, we fall back to the 'ksmessaging' section in koha-conf.xml.
+## 'suomifi_rest_password_<BRANCHCODE>').  If there is no configuration stored
+## in plugin_data, we fall back to the 'ksmessaging' section in koha-conf.xml.
 sub new {
     my ($class, $params) = @_;
 
@@ -96,8 +96,9 @@ sub combineacrossbranches {
 ## RFAPI.
 ## Suosii is generic all-mail-config.
 ## We return the REST config for the current interface+branch.  The password
-## is overlaid from plugin_data (suomifi_rest_password) when available, falling
-## back to the 'rest' password from the config (plugin_data YAML or koha-conf).
+## is overlaid from plugin_data (suomifi_rest_password_<BRANCHCODE>) when
+## available, falling back to the 'rest' password from the config
+## (plugin_data YAML or koha-conf).
 sub getRESTConfig {
     my ($self) = @_;
     return {
@@ -269,8 +270,9 @@ sub _load_plugin_password {
     return $row;
 }
 
-## Store the REST password into plugin_data (suomifi_rest_password) and return
-## the count of changed rows, or 0 if the password was already empty/unchanged.
+## Store the REST password into plugin_data (suomifi_rest_password_<BRANCHCODE>)
+## and return the count of changed rows, or 0 if the password was already
+## empty/unchanged.
 sub store_password {
     my ($self, $password) = @_;
     return 0 unless defined $password && length $password;
