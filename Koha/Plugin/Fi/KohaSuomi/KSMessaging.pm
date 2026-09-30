@@ -11,6 +11,8 @@ use utf8;
 
 ## Configuration module (read/write plugin_data config, fallback to koha-conf.xml)
 use Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Config;
+## Sets up the 'suomifi' message transport type
+use Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Setup;
 ## Used to verify the CSRF token submitted with the configuration form
 use Koha::Token;
 
@@ -99,12 +101,20 @@ sub uninstall() {
 ## REST configuration (and optionally the REST password).  The configuration
 ## is stored in plugin_data via Modules::Config, falling back to the
 ## 'ksmessaging' section in koha-conf.xml when no plugin_data exists yet.
+##
+## The page also has the Suomi.fi messaging setup, which is the one time
+## database setup the plugin needs: Modules::Setup adds the 'suomifi' message
+## transport type and copies the selected circulation and reserves transports
+## to it, and the SuomiFiMessaging system preference is toggled here because
+## it decides whether the Suomi.fi column is shown in Administration ->
+## Message preferences.
 sub configure {
     my ( $self, $args ) = @_;
 
     my $cgi = $self->{'cgi'};
     my @messages;
     my $saved;
+    my $setup_result;
 
     my $config = Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Config->new({});
     $config->load_for_configure;
@@ -114,15 +124,36 @@ sub configure {
     my $suomifi_alt_sender_for_display = $config->loadedAltSenderForDisplay;
     my $suomifi_cost_pool_for_display = $config->loadedCostPoolForDisplay;
 
+    # Each of the three actions below is exclusive, so that a single click can
+    # never run two of them.  They are all POSTs and all need a valid token.
+    if ( $cgi->request_method eq 'POST' && $cgi->param('toggle_suomifi_messaging') ) {
+
+        # Nothing is stored in plugin_data here, so a rejected token has not
+        # thrown away anything the administrator typed in
+        if ( !$self->_csrf_token_valid($cgi) ) {
+            push @messages, $self->_configure_message( error => 'config_18' );
+        }
+        else {
+            $self->_toggle_suomifi_messaging($config);
+        }
+    }
+    elsif ( $cgi->request_method eq 'POST' && $cgi->param('setup_messages') ) {
+
+        if ( !$self->_csrf_token_valid($cgi) ) {
+            push @messages, $self->_configure_message( error => 'config_18' );
+        }
+        else {
+            $setup_result = $self->_create_message_transports;
+        }
+    }
     # Save the configuration if the admin pressed "Save"
-    if ( $cgi->request_method eq 'POST' && $cgi->param('save') ) {
+    elsif ( $cgi->request_method eq 'POST' && $cgi->param('save') ) {
 
         # Show what the admin actually submitted, so a failed save does not
         # throw away the configuration they just typed in
         $config_for_display = $cgi->param('config') || '';
         $suomifi_alt_sender_for_display = $cgi->param('suomifi_alt_sender') || '';
         $suomifi_cost_pool_for_display = $cgi->param('suomifi_cost_pool') || '';
-
 
         if ( !$self->_csrf_token_valid($cgi) ) {
             push @messages, $self->_configure_message( error => 'config_18' );
@@ -142,7 +173,52 @@ sub configure {
         suomifi_cost_pool => $suomifi_cost_pool_for_display,
         messages => \@messages,
         saved   => $saved,
+        setup_status => $self->_setup_status($config),
+        setup_result => $setup_result,
     );
+}
+
+## The current state of the Suomi.fi message transport, for the setup section
+## of the template.  The configuration object is passed in because it has
+## already been loaded, and loading it again would not be cheaper.
+sub _setup_status {
+    my ( $self, $config ) = @_;
+
+    my $setup = Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Setup->new({});
+
+    return {
+        transport_type_exists => $setup->transport_type_exists,
+        transport_count       => $setup->transport_count,
+        suomifi_messaging     => $config->suomifiMessagingEnabled ? 1 : 0,
+    };
+}
+
+## Flips the SuomiFiMessaging system preference, which is what shows or hides
+## the Suomi.fi column in Administration -> Message preferences.  The column is
+## only a user interface: the notices that are sent are the ones queued for the
+## 'suomifi' message transport type, so hiding the column stops nothing.
+sub _toggle_suomifi_messaging {
+    my ( $self, $config ) = @_;
+
+    return $config->setSuomiFiMessaging( $config->suomifiMessagingEnabled ? 0 : 1 );
+}
+
+## Adds the 'suomifi' message transport type and copies the selected
+## circulation and reserves transports to it.  Returns the number of transports
+## that were added and the number that were already there, or a hashref with an
+## 'error' key if the setup failed.
+sub _create_message_transports {
+    my ($self) = @_;
+
+    my $setup = Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Setup->new({});
+
+    my $result = eval { $setup->create_message_transports };
+    if ($@) {
+        warn "KSMessaging: setting up the suomifi message transports failed: $@";
+        return { error => 1 };
+    }
+
+    return $result;
 }
 
 ## Every exit path funnels through here so that 'messages' and 'saved' are
@@ -157,6 +233,8 @@ sub _output_configure_page {
         suomifi_cost_pool => $params{suomifi_cost_pool},
         messages => $params{messages},
         saved    => $params{saved},
+        setup_status => $params{setup_status},
+        setup_result => $params{setup_result},
     );
 
     return $self->output_html( $template->output() );

@@ -21,6 +21,132 @@
     padding: 0.75rem 0.85rem;
     margin: 0.5rem 0 0;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    overflow-x: auto;
+    white-space: pre;
+}
+
+/* Settings form: cap the YAML editors and hints so they stay readable on a
+   wide screen, and give each fieldset breathing room. */
+.ksmessaging-config-form fieldset.rows {
+    margin-bottom: 1.25rem;
+}
+.ksmessaging-config-form legend {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+}
+.ksmessaging-config-form textarea {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    max-width: min(100%, 64rem);
+    width: 100%;
+}
+.ksmessaging-config-form .hint {
+    color: #3f4d56;
+    line-height: 1.35;
+    margin: 0.35rem 0 0;
+    max-width: 64rem;
+}
+.ksmessaging-config-form .help-block {
+    margin-bottom: 1rem;
+    max-width: 64rem;
+}
+
+/* Collapsed YAML example, opened by the browser instead of script. */
+.ksmessaging-example {
+    margin-top: 0.55rem;
+    max-width: 64rem;
+}
+.ksmessaging-example summary {
+    color: #005a78;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+/* Suomi.fi messaging: the description sits left, the status readouts right, so
+   neither of them stretches across the whole page on a wide screen. */
+.ksmessaging-setup-header {
+    align-items: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.75rem;
+    justify-content: space-between;
+}
+.ksmessaging-setup-header > div:first-child {
+    flex: 1 1 24rem;
+    min-width: 0;
+}
+.ksmessaging-setup-header h2 {
+    margin-top: 0;
+}
+.ksmessaging-setup-header .help-block {
+    margin-bottom: 0;
+    max-width: 44rem;
+}
+.ksmessaging-status-strip {
+    display: grid;
+    flex: 0 1 32rem;
+    gap: 0.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+    min-width: 0;
+}
+.ksmessaging-status-item {
+    background: #f8faf9;
+    border: 1px solid var(--bs-border-color, #d9dee3);
+    border-radius: 0.4rem;
+    min-width: 0;
+    padding: 0.55rem 0.7rem;
+}
+.ksmessaging-status-label {
+    color: #53616b;
+    display: block;
+    font-size: 0.8rem;
+    line-height: 1.25;
+    margin-bottom: 0.15rem;
+}
+.ksmessaging-status-value {
+    color: #2f3b43;
+    display: block;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ksmessaging-status-value.ksmessaging-status-off {
+    color: #8a5f5f;
+}
+.ksmessaging-status-value.ksmessaging-status-on {
+    color: #2f6b4f;
+}
+
+/* One card per action: description left, button right, both capped in width. */
+.ksmessaging-action-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+    margin-top: 1rem;
+    max-width: 72rem;
+}
+.ksmessaging-action-card {
+    border: 1px solid var(--bs-border-color, #d9dee3);
+    border-radius: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.85rem 0.95rem;
+}
+.ksmessaging-action-card h3 {
+    font-size: 1rem;
+    margin: 0;
+}
+.ksmessaging-action-card .hint {
+    color: #3f4d56;
+    flex: 1 1 auto;
+    line-height: 1.35;
+    margin: 0;
+}
+.ksmessaging-action-card .btn {
+    align-self: flex-start;
 }
 </style>
 [% INCLUDE 'doc-head-close.inc' %]
@@ -49,8 +175,9 @@
                 <div class="page-section mt-3">
 
                     <h1>[% T.config_1 %]</h1>
+                    <p class="help-block">[% T.config_41 %]</p>
 
-                    <form method="post" class="validated">
+                    <form method="post" class="validated ksmessaging-config-form">
                         [% INCLUDE 'csrf-token.inc' %]
 
                         <input type="hidden" name="class" value="[% CLASS | html %]"/>
@@ -58,14 +185,15 @@
                         <input type="hidden" name="save" value="1" />
 
                         <fieldset class="rows">
+                            <legend>[% T.config_42 %]</legend>
                             <ol>
                                 <li>
                                     <label for="config">[% T.config_6 %]</label>
-                                    <textarea id="config" name="config" rows="12" cols="70">[% config | html %]</textarea>
-                                    <div class="hint">
-                                        [% T.config_7 %]
-                                    <a class="toggle-example" href="#" id="toggle-example">[% T.config_8 %]</a>
-                                    <pre class="code-example" id="example-block" style="display: none;"><code>suomifi:
+                                    <textarea id="config" name="config" rows="16">[% config | html %]</textarea>
+                                    <p class="hint">[% T.config_7 %]</p>
+                                    <details class="ksmessaging-example">
+                                        <summary>[% T.config_8 %]</summary>
+                                        <pre class="code-example"><code>suomifi:
   branches:
     default:
       stagingdir: /tmp/ksmessaging
@@ -114,20 +242,22 @@ letters:
         password: secret
         protocol: sftp
   skipletters: RETURN,OVERDUE
-  combineacrossbranches: no</code></pre></div>
+  combineacrossbranches: no</code></pre>
+                                    </details>
                                 </li>
 
                             </ol>
                         </fieldset>
                         <fieldset class="rows">
+                            <legend>[% T.config_43 %]</legend>
                             <ol>
                                 <li>
                                     <label for="suomifi_alt_sender">[% T.config_12 %]</label>
-                                    <textarea id="suomifi_alt_sender" rows="5" cols="20" name="suomifi_alt_sender"/>[% suomifi_alt_sender | html %]</textarea>
-                                    <div class="hint">
-                                        [% T.config_7 %]
-                                        <a class="toggle-example" href="#" id="toggle-example-alt">[% T.config_8 %]</a>
-                                        <pre class="code-example" id="example-block-alt" style="display: none;"><code>fi-FI:
+                                    <textarea id="suomifi_alt_sender" rows="8" name="suomifi_alt_sender">[% suomifi_alt_sender | html %]</textarea>
+                                    <p class="hint">[% T.config_7 %]</p>
+                                    <details class="ksmessaging-example">
+                                        <summary>[% T.config_8 %]</summary>
+                                        <pre class="code-example"><code>fi-FI:
   BRANCH:
     - Erikoiskirjasto
 en:
@@ -138,24 +268,18 @@ default:
   - Kirjasto
   - Katu 1
   - 0000 Kaupunki
-  - Puh. 0501111111
-  </code></pre>
-                                    </div>
+  - Puh. 0501111111</code></pre>
+                                    </details>
                                 </li>
-                            </ol>
-                        </fieldset>
-                        <fieldset class="rows">
-                            <ol>
                                 <li>
                                     <label for="suomifi_cost_pool">[% T.config_13 %]</label>
-                                    <textarea id="suomifi_cost_pool" rows="5" cols="20" name="suomifi_cost_pool"/>[% suomifi_cost_pool | html %]</textarea>
-                                    <div class="hint">
-                                        [% T.config_7 %]
-                                        <a class="toggle-example" href="#" id="toggle-example-cost">[% T.config_8 %]</a>
-                                        <pre class="code-example" id="example-block-cost" style="display: none;"><code>KOHAPK: KOHA1234
-TU: TU23456
-</code></pre>
-                                    </div>
+                                    <textarea id="suomifi_cost_pool" rows="8" name="suomifi_cost_pool">[% suomifi_cost_pool | html %]</textarea>
+                                    <p class="hint">[% T.config_7 %]</p>
+                                    <details class="ksmessaging-example">
+                                        <summary>[% T.config_8 %]</summary>
+                                        <pre class="code-example"><code>KOHAPK: KOHA1234
+TU: TU23456</code></pre>
+                                    </details>
                                 </li>
                             </ol>
                         </fieldset>
@@ -164,6 +288,71 @@ TU: TU23456
                             <a class="btn btn-default" href="/cgi-bin/koha/plugins/plugins-home.pl">[% T.config_10 %]</a>
                         </fieldset>
                     </form>
+
+                </div>
+
+                <div class="page-section mt-3">
+
+                    <div class="ksmessaging-setup-header">
+                        <div>
+                            <h2>[% T.config_19 %]</h2>
+                            <p class="help-block">[% T.config_20 %]</p>
+                        </div>
+                        <div class="ksmessaging-status-strip">
+                            <div class="ksmessaging-status-item">
+                                <span class="ksmessaging-status-label">[% T.config_21 %]</span>
+                                <span class="ksmessaging-status-value [% IF setup_status.transport_type_exists %]ksmessaging-status-on[% ELSE %]ksmessaging-status-off[% END %]">[% setup_status.transport_type_exists ? T.config_22 : T.config_23 %]</span>
+                            </div>
+                            <div class="ksmessaging-status-item">
+                                <span class="ksmessaging-status-label">[% T.config_24 %]</span>
+                                <span class="ksmessaging-status-value">[% setup_status.transport_count %]</span>
+                            </div>
+                            <div class="ksmessaging-status-item">
+                                <span class="ksmessaging-status-label">[% T.config_25 %]</span>
+                                <span class="ksmessaging-status-value [% IF setup_status.suomifi_messaging %]ksmessaging-status-on[% ELSE %]ksmessaging-status-off[% END %]">[% setup_status.suomifi_messaging ? T.config_26 : T.config_27 %]</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    [% IF setup_result %]
+                        [% IF setup_result.error %]
+                            <div class="alert alert-danger mt-3">[% T.config_28 %]</div>
+                        [% ELSE %]
+                            <div class="alert alert-success mt-3">[% T.config_29 %] [% T.config_30 %]: [% setup_result.added %], [% T.config_31 %]: [% setup_result.skipped %].</div>
+                        [% END %]
+                    [% END %]
+
+                    <div class="ksmessaging-action-grid">
+
+                        <form method="post" class="ksmessaging-action-card validated">
+                            [% INCLUDE 'csrf-token.inc' %]
+
+                            <input type="hidden" name="class" value="[% CLASS | html %]"/>
+                            <input type="hidden" name="method" value="[% METHOD | html %]"/>
+
+                            <h3>[% T.config_39 %]</h3>
+                            <p class="hint">[% T.config_32 %]</p>
+                            <input type="submit" name="setup_messages" value="[% T.config_38 %]" class="btn btn-primary"
+                                onclick="return confirm('[% T.config_33 | html %]');" />
+                        </form>
+
+                        <form method="post" class="ksmessaging-action-card validated">
+                            [% INCLUDE 'csrf-token.inc' %]
+
+                            <input type="hidden" name="class" value="[% CLASS | html %]"/>
+                            <input type="hidden" name="method" value="[% METHOD | html %]"/>
+
+                            <h3>[% T.config_40 %]</h3>
+                            <p class="hint">[% T.config_34 %]</p>
+                            [% IF setup_status.suomifi_messaging %]
+                                <input type="submit" name="toggle_suomifi_messaging" value="[% T.config_37 %]" class="btn btn-default"
+                                    onclick="return confirm('[% T.config_36 | html %]');" />
+                            [% ELSE %]
+                                <input type="submit" name="toggle_suomifi_messaging" value="[% T.config_35 %]" class="btn btn-primary" />
+                            [% END %]
+                        </form>
+
+                    </div>
 
                 </div>
 
@@ -186,23 +375,6 @@ TU: TU23456
            
             });
         }
-    });
-    
-    document.querySelectorAll(".toggle-example").forEach(function (toggle) {
-        toggle.addEventListener("click", function (e) {
-            e.preventDefault();
-            var block = this.nextElementSibling;
-            if (!block) {
-                return;
-            }
-            if (block.style.display === "none") {
-                block.style.display = "block";
-                this.textContent = "[% T.config_11 %]";
-            } else {
-                block.style.display = "none";
-                this.textContent = "[% T.config_8 %]";
-            }
-        });
     });
 </script>
 

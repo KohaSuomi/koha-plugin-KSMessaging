@@ -68,44 +68,70 @@ The plugin system is documented in the plugin section of the Koha documentation.
 
 Upload the KPZ file in **Tools → Plugins → Upload plugin**.
 
-### 3. Run the one-time database setup
+### 3. Set up Suomi.fi messaging
 
-The plugin adds no tables of its own and its `install` and `upgrade` hooks do
-nothing, so the database setup is a manual one-time step:
+Go to **Tools → Plugins → KSMessaging → Configure** and scroll to the
+**Suomi.fi messaging** section. It has a description on the left and three
+status readouts on the right:
 
-    sudo -u koha perl <pluginsdir>/Koha/Plugin/Fi/KohaSuomi/KSMessaging/misc/set_suomifi_messaging.pl
+| | |
+| --- | --- |
+| suomifi message transport | in use / not in use |
+| Notices sent through Suomi.fi | how many notices are set up |
+| Suomi.fi column in the message preferences | shown / hidden |
 
-The script
+Below them are the two action buttons. Press **Set up Suomi.fi messaging**. The
+button
 
-- adds the `suomifi` message transport type,
-- creates the `SuomiFiMessaging`, `SuomiFiAltSender` and `SuomiFiCostPool` system
-  preferences,
+- adds the `suomifi` message transport type, which is not part of a standard
+  Koha installation,
 - copies every `circulation` and `reserves` message transport to the new
-  `suomifi` transport type.
+  `suomifi` transport type, and reports how many notices were added and how
+  many were already there.
 
-The preference inserts can be repeated safely, but the message transports are
-copied unconditionally, so running the script twice creates duplicate transports
-for every letter. Run it once.
+The button can be pressed again at any time. A notice that is already set up
+for Suomi.fi is never changed or removed, and the notices that are selected for
+Suomi.fi for the first time are copied from the selections of the other
+transport types.
 
-The three `SuomiFi*` system preferences are legacy and are not read by the
-plugin: the sender addresses and the cost pool are configured on the plugin
-configuration page. Do not edit them.
+The plugin's `install` and `upgrade` hooks do nothing, so this is the only
+database setup there is.
 
 ### 4. Choose the notices that go to Suomi.fi
 
-In **Administration → Message transports**, select the letters that should be
-sent through Suomi.fi under the `suomifi` transport type. The setup script copies
-the current print selections, so review them after the first install.
+The same section has a second button, which shows or hides the **Suomi.fi**
+column in **Administration → Message preferences**. Press
+**Show the Suomi.fi column** first: without it the notices that are sent
+through Suomi.fi cannot be reviewed or changed. The column is a user interface
+only. Hiding it again does not stop the notices that are already set up for
+Suomi.fi, and it is not what sends them.
+
+Then review the notices in **Administration → Message preferences**: the setup
+copied the selections of the other transport types, so they are the ones to
+check first.
 
 Those selections are what put notices into the message queue with the `suomifi`
 transport type, and `pate.pl --suomifi` picks up exactly those pending notices.
 
+The `SuomiFiMessaging` system preference behind the column is not declared in
+any `.pref` file and the plugin does not send messages based on it, so it is not
+shown in **Administration → System preferences** and it does not stop the
+notices. That is why it is toggled from the plugin configuration page.
+
+The `SuomiFiAltSender` and `SuomiFiCostPool` system preferences are not created
+any more. The sender addresses and the cost pool are configured on the plugin
+configuration page and stored in `plugin_data`; a library that still has values
+in the old system preferences keeps using them.
+
 ## Configuring
 
 The configuration is edited in **Tools → Plugins → KSMessaging → Configure**. The
-page has three YAML fields. Each field must contain a YAML mapping; an empty
-field, invalid YAML or YAML that is not a mapping is rejected with a message and
-nothing is saved.
+page has two groups of YAML fields: **Message service** holds the main settings,
+and **Message details** holds the alternative sender addresses and the cost
+pool. Each field must contain a YAML mapping; an empty field, invalid YAML or
+YAML that is not a mapping is rejected with a message and nothing is saved.
+Every field has a **Show example** link that opens a documented example of its
+format.
 
 The values are stored in the `plugin_data` table of the database:
 

@@ -401,6 +401,25 @@ sub getSuomiFiCostPool {
     return;
 }
 
+## The SuomiFiMessaging system preference decides whether the Suomi.fi column is
+## shown in Administration -> Message preferences.  The preference is read by
+## the messaging preference form itself, not by the plugin, and it is not
+## declared in any .pref file, so the system preferences page does not show it
+## and this module is the only place that can read or change it.
+sub suomifiMessagingEnabled {
+    my ($self) = @_;
+
+    return C4::Context->preference('SuomiFiMessaging');
+}
+
+## Enables or disables the Suomi.fi column in the message preferences form by
+## writing the SuomiFiMessaging system preference.  Returns true on success.
+sub setSuomiFiMessaging {
+    my ($self, $enabled) = @_;
+
+    return C4::Context->set_preference( 'SuomiFiMessaging', $enabled ? 1 : 0 );
+}
+
 ## Maps a free-form country string to an ISO 3166-1 alpha-2 code (default FI)
 sub countryCode {
     my ($self, $country) = @_;

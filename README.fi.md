@@ -71,43 +71,65 @@ osassa.
 
 Lataa KPZ-tiedosto kohdassa **Työkalut → Lisäosat → Lataa lisäosa**.
 
-### 3. Suorita kertaluontoinen tietokantamääritys
+### 3. Määritä Suomi.fi-viestintä
 
-Lisäosa ei luo omia tauluja, ja sen `install`- ja `upgrade`-koukut eivät tee
-mitään, joten tietokannan määritys on manuaalinen kertaluontoinen vaihe:
+Siirry kohdassa **Työkalut → Lisäosat → KSMessaging → Määritä** kohtaan
+**Suomi.fi-viestintä**. Vasemmalla on kuvaus, oikealla kolme tilanäyttöä:
 
-    sudo -u koha perl <pluginsdir>/Koha/Plugin/Fi/KohaSuomi/KSMessaging/misc/set_suomifi_messaging.pl
+| | |
+| --- | --- |
+| suomifi-viestityyppi | käytössä / ei käytössä |
+| Suomi.fin kautta lähetettävät ilmoitukset | kuinka moni ilmoitus on määritetty |
+| Suomi.fi-sarake viestitysasetuksissa | näkyvissä / piilotettu |
 
-Skripti
+Alla ovat kaksi toimintopainiketta. Paina **Määritä Suomi.fi-viestintä**.
+Painike
 
-- lisää viestityypin `suomifi`,
-- luo järjestelmäasetukset `SuomiFiMessaging`, `SuomiFiAltSender` ja
-  `SuomiFiCostPool`,
-- kopioi kaikki kierto- ja varausviestityypit uuteen `suomifi`-viestityyppiin.
+- lisää viestityypin `suomifi`, joka ei kuulu vakio-Kohaan,
+- kopioi kaikki kierto- ja varausviestityypit uuteen `suomifi`-viestityyppiin ja
+  kertoo, kuinka monta ilmoitusta lisättiin ja kuinka monta oli jo määritetty.
 
-Asetusten lisäykset voi tehdä uudelleen turvallisesti, mutta viestityypit
-kopioidaan ehdottoman, joten kahden ajon jälkeen jokaiselle kirjeelle syntyy
-kaksoiskappale. Suorita skripti vain kerran.
+Painiketta voi painaa uudelleen milloin tahansa. Jo Suomi.fille määritettyä
+ilmoitusta ei koskaan muuteta eikä poisteta, ja ensimmäisen kerran Suomi.fille
+määritetyt ilmoitukset kopioidaan muiden viestityyppien valinnoista.
 
-Kolme `SuomiFi*`-järjestelmäasetusta ovat vanhoja ja lisäosa ei lue niitä:
-lähettäjäosoitteet ja kustannuspooli määritetään lisäosan määrityssivulla. Älä
-muokkaa niitä.
+Lisäosan `install`- ja `upgrade`-koukut eivät tee mitään, joten tämä on koko
+tietokantamääritys.
 
 ### 4. Valitse Suomi.fin kautta lähetettävät ilmoitukset
 
-Kohdassa **Ylläpito → Viestityypit** valitse kirjeet, jotka lähetetään Suomi.fin
-kautta viestityypin `suomifi` alla. Määritysskripti kopioi nykyiset
-tulostusvalinnat, joten tarkista ne ensimmäisen asennuksen jälkeen.
+Samassa kohdassa on toinen painike, joka näyttää tai piilottaa **Suomi.fi**-
+sarakkeen kohdassa **Ylläpito → Viestitysasetukset**. Paina ensin **Näytä
+Suomi.fi-sarake**: ilman sitä Suomi.fin kautta lähetettäviä ilmoituksia ei voi
+tarkistaa eikä muuttaa. Sarake on vain käyttöliittymä. Sen piilottaminen ei
+estä jo Suomi.fille määritettyjä ilmoituksia, eikä sarake ole se mikä
+lähettää ne.
+
+Tarkista sitten ilmoitukset kohdassa **Ylläpito → Viestitysasetukset**: määritys
+kopioi valinnat muista viestityypeistä, joten ne kannattaa tarkistaa ensin.
 
 Nämä valinnat lisäävät viestijonoon ilmoitukset, joiden viestityyppi on
 `suomifi`, ja `pate.pl --suomifi` poimii juuri ne odottavat ilmoitukset.
 
+Sarakkeen takana olevaa `SuomiFiMessaging`-järjestelmäasetusta ei ole määritelty
+missään `.pref`-tiedostossa eikä lisäosa lähetä viestejä sen perusteella, joten
+se ei näy kohdassa **Ylläpito → Järjestelmäasetukset** eikä estä ilmoituksia.
+Siksi se kytketään lisäosan määrityssivulta.
+
+Järjestelmäasetuksia `SuomiFiAltSender` ja `SuomiFiCostPool` ei enää luoda.
+Lähettäjäosoitteet ja kustannuspaikka määritetään lisäosan määrityssivulla ja
+tallennetaan `plugin_data`-tauluun; kirjasto, jolla vanhoissa
+järjestelmäasetuksissa on vielä arvot, käyttää niitä edelleen.
+
 ## Määrittäminen
 
 Asetukset muokataan kohdassa **Työkalut → Lisäosat → KSMessaging → Määritä**.
-Sivulla on kolme YAML-kenttää. Jokaisen kentän sisällön on oltava
-avain-arvo-rakenne; tyhjä kenttä, virheellinen YAML tai muu kuin
-avain-arvo-rakenne hylätään ja mitään ei tallenneta.
+Sivulla on kaksi YAML-kenttäryhmää: **Viestipalvelu** sisältää pääasetukset ja
+**Viestin tiedot** vaihtoehtoiset lähettäjäosoitteet sekä kustannuspaikan.
+Jokaisen kentän sisällön on oltava avain-arvo-rakenne; tyhjä kenttä, virheellinen
+YAML tai muu kuin avain-arvo-rakenne hylätään ja mitään ei tallenneta.
+Jokaisen kentän **Näytä esimerkki** -linkki avaa kentän muotoa kuvaavan
+esimerkin.
 
 Arvot tallennetaan tietokannan `plugin_data`-tauluun:
 

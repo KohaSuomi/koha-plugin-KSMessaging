@@ -15,6 +15,7 @@ Koha/Plugin/Fi/KohaSuomi/KSMessaging/t/
 ├── PLAN.md
 ├── 00-load.t
 ├── config.t
+├── setup.t
 ├── epl.t
 ├── suomifi.t
 ├── rest.t
@@ -47,7 +48,7 @@ BEGIN {
 
 ## Coverage per file (expected values empirically verified)
 
-- **00-load.t** — `use_ok` for all 10 packages: main plugin, Config,
+- **00-load.t** — `use_ok` for all 11 packages: main plugin, Config, Setup,
   SendMessages, CreateLetters, Format::{EPL,PDF,SuomiFi},
   Deliver::{REST,File,DispatchXML}.
 
@@ -65,6 +66,34 @@ BEGIN {
   mocked `C4::Context->preference` (lang section, branch section, `default`,
   invalid YAML, non-hash, `costPool` code regex `/^[A-Z0-9]+$/`);
   `load_for_configure` + display getters.
+
+- **setup.t** — `Modules::Setup` and the Suomi.fi messaging setup on the
+  configure page.  The database is a fake handle (`TestDBH`/`TestSTH` in the
+  test file) that records the statements and answers the queries from canned
+  results; `C4::Context->dbh` is mocked to return it, so no database is needed.
+  - `create_message_transports`: the exact SQL — bound `INSERT IGNORE` into
+    `message_transport_types`, a `SELECT DISTINCT` source restricted to
+    `letter_module IN ('circulation', 'reserves')` with
+    `message_transport_type <> 'suomifi'` and **no** `GROUP BY` (it would break
+    under `ONLY_FULL_GROUP_BY`), and bound `INSERT IGNORE` copies; the bind
+    order of every copy; added/skipped counting.  The fake answers inserts with
+    DBI's `'0E0'`, so the `"0E0" is truthy` trap is covered.
+  - idempotency: an existing transport type is not created again and a
+    transport that is already there is counted as skipped (`added => 0`), a
+    partly existing setup counts one added and one skipped.
+  - the setup writes **no** `systempreferences` and **no** `plugin_data` row.
+  - `transport_type_exists` / `transport_count` for a setup that exists and for
+    one that does not.
+  - `Config::suomifiMessagingEnabled` (0/1/undef) and
+    `Config::setSuomiFiMessaging` writing `SuomiFiMessaging` through
+    `C4::Context->set_preference`.
+  - `configure()` routing with `Config`, `Setup`, `Koha::Token` and the plugin
+    class itself mocked: `setup_messages` calls only the setup, the toggle only
+    `setSuomiFiMessaging` (on and off), `save` only `Config->save`; an invalid
+    CSRF token runs none of the three and reports `config_18`; a failing setup
+    is reported as an error without claiming any transports were added; a GET
+    renders the transport type, the transport count and the preference state and
+    changes nothing.
 
 - **epl.t** — mock `_epl_config` to a fixture
   `{ code=>'SOME', layout=>{ templatecode=>'TPL9', contpagecode=>'CONT',

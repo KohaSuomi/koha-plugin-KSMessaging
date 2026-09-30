@@ -15,6 +15,7 @@ BEGIN {
 my @modules = qw(
     Koha::Plugin::Fi::KohaSuomi::KSMessaging
     Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Config
+    Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Setup
     Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::SendMessages
     Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::CreateLetters
     Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Format::EPL
