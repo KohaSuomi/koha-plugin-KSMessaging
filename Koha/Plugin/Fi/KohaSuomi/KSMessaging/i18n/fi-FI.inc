@@ -42,5 +42,12 @@
         config_41                                  = "Alla olevat asetukset tallennetaan tietokantaan, ja viestejä lähettävät ajastukset lukevat ne. Esimerkissä näytetään muoto.",
         config_42                                  = "Viestipalvelu",
         config_43                                  = "Viestin tiedot",
+        config_44                                  = "Asetukset koha-conf.xml-tiedostossa",
+        config_45                                  = "Niin kauan kuin tietokantaan ei tallenneta mitään, lisäosa lukee asetukset koha-conf.xml-tiedoston &lt;ksmessaging&gt;-osiosta. Tämä täyttää alle olevan kentän kyseisellä osiosta, jotta arvot voi tarkistaa ja tallentaa tähän; mitään ei tallenneta ennen tallennuspainikkeen painamista. Osiossa oleva rest.password siirretään tallennettaessa omaan tietokantariviinsä, eikä sitä jätetä näkyvään YAML-muotoon.",
+        config_46                                  = "Täytä koha-conf.xml-tiedostosta",
+        config_47                                  = "Asetukset täytettiin koha-conf.xml-tiedostosta. Tarkista ne alla ja tallenna, jotta ne tallentuvat.",
+        config_48                                  = "koha-conf.xml-tiedostossa ei ole &lt;ksmessaging&gt;-osiota, joten kopioitavaa ei ole.",
+        config_49                                  = "Asetusten lukeminen koha-conf.xml-tiedostosta epäonnistui. Tarkista virheloki.",
+        config_51                                  = "REST-salasana poistettiin asetuksista ja tallennettiin erilleen seuraaville toimipisteille:",
     }
 %]

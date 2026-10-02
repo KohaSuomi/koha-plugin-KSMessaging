@@ -137,9 +137,10 @@ sub getFileTransferConfig {
 ## Configuration page support
 ############################################################
 
-## Load the stored config for display on the configure page.  If nothing is
-## stored in plugin_data, load the fallback from koha-conf.xml so the admin
-## can see and copy the current values.
+## Load the stored config for display on the configure page.  Only plugin_data
+## is read: the koha-conf.xml fallback reaches the page through
+## config_from_koha_conf(), so that the administrator gets it as text in the
+## textarea and decides whether to save it.
 sub load_for_configure {
     my ($self) = @_;
     $self->{config_for_display} = $self->_load_plugin_config;
@@ -165,6 +166,8 @@ sub loadedCostPoolForDisplay {
 
 ## Save the configuration from the configure page into plugin_data.
 ## Accepts either a hashref (->save({...})) or a CGI object (->save($cgi)).
+## Any REST password in the YAML is moved into a plugin_data row of its own and
+## left out of the stored YAML; see _config_without_passwords().
 ## Returns 1 on success and 0 on failure.  On failure last_save_error holds a
 ## reason code ('empty', 'invalid_yaml' or 'not_a_mapping') so the caller can
 ## show a specific message instead of one generic error.
@@ -209,17 +212,123 @@ sub save {
         }
     }
 
-    $self->_store_plugin_data( 'ksmessaging_config', $config );
+    $self->_store_plugin_data( 'ksmessaging_config', $self->_config_without_passwords($config) );
     $self->_store_plugin_data( 'suomifi_alt_sender', $suomifi_alt_sender );
     $self->_store_plugin_data( 'suomifi_cost_pool', $suomifi_cost_pool );
 
     return 1;
 }
 
+## Move the REST passwords out of the configuration and into their own
+## plugin_data rows.  getRESTConfig() already prefers suomifi_rest_password_<B>
+## over the YAML, so a password left in the stored configuration is both a
+## plaintext secret echoed back into the configuration page and one keystroke of
+## editing away from being overwritten with a different secret.
+##
+## Only the Suomi.fi REST password is moved, because that is the one with a row
+## of its own and a cronjob that writes it.  The iPost customerpass and the file
+## transfer password stay where they are: nothing reads them from anywhere else,
+## so stripping them would break those transfers.
+##
+## Returns the configuration to store.  When it holds no REST password the
+## administrator's text is stored unchanged, so comments and formatting survive
+## a normal save; only a configuration that really carries a password is
+## re-serialised, and then without it.
+sub _config_without_passwords {
+    my ($self, $yaml) = @_;
+
+    $self->{last_moved_passwords} = [];
+
+    my $parsed = eval { YAML::XS::Load($yaml) };
+    return $yaml unless ref $parsed eq 'HASH';
+
+    my $branches = $parsed->{'suomifi'}->{'branches'};
+    return $yaml unless ref $branches eq 'HASH';
+
+    my @moved;
+    for my $branch ( keys %$branches ) {
+        my $branch_config = $branches->{$branch};
+        next unless ref $branch_config eq 'HASH';
+
+        my $rest = $branch_config->{'rest'};
+        next unless ref $rest eq 'HASH';
+
+        my $password = $rest->{'password'};
+
+        # Only a non-empty scalar can be stored.  Anything else is left in the
+        # YAML for the administrator to see rather than silently dropped, and an
+        # absent password never clears a row that is already stored.
+        next unless defined $password && !ref $password && length $password;
+
+        $self->store_password( $password, $branch );
+
+        delete $rest->{'password'};
+        push @moved, $branch;
+    }
+
+    return $yaml unless @moved;
+
+    $self->{last_moved_passwords} = [ sort @moved ];
+
+    my $stripped = eval { YAML::XS::Dump($parsed) };
+    return $yaml unless defined $stripped && $stripped =~ /\S/;
+
+    return $stripped;
+}
+
+## Branchcodes whose REST password the last save() moved out of the YAML and
+## into a plugin_data row of its own.  Empty when there was nothing to move.
+sub moved_passwords {
+    my ($self) = @_;
+    return $self->{last_moved_passwords} || [];
+}
+
 ## Reason why the last save() failed, or undef if it succeeded.
 sub last_save_error {
     my ($self) = @_;
     return $self->{last_save_error};
+}
+
+## Return the 'ksmessaging' section of koha-conf.xml as the YAML that save()
+## stores, so that the configuration page can offer the fallback as a starting
+## point for the configuration text.  Nothing is written: the text ends up in
+## the textarea and the administrator saves it like any other edit, which is
+## what keeps the button safe to offer while a configuration is already stored.
+##
+## The section is serialised as it is, so a rest.password that is part of it
+## comes along and lands in the textarea.  That is fine: save() moves any REST
+## password into a plugin_data row of its own and stores the YAML without it,
+## so the password is only ever visible on this page, and only until it is
+## saved.
+##
+## Returns the YAML, or undef when there is nothing to offer, in which case
+## last_copy_error holds a reason code ('empty' or 'invalid_yaml').
+sub config_from_koha_conf {
+    my ($self) = @_;
+
+    $self->{last_copy_error} = undef;
+
+    my $config = C4::Context->config('ksmessaging');
+
+    unless ( ref $config eq 'HASH' && scalar keys %$config ) {
+        $self->{last_copy_error} = 'empty';
+        return;
+    }
+
+    my $yaml = eval { YAML::XS::Dump($config) };
+    if ( $@ || !defined $yaml || $yaml !~ /\S/ ) {
+        $self->{last_copy_error} = 'invalid_yaml';
+        return;
+    }
+
+    return $yaml;
+}
+
+## Reason why the last config_from_koha_conf() returned nothing, or undef if it
+## returned the YAML.
+sub last_copy_error {
+    my ($self) = @_;
+    return $self->{last_copy_error};
 }
 
 ############################################################
@@ -272,9 +381,11 @@ sub _load_plugin_password {
 
 ## Store the REST password into plugin_data (suomifi_rest_password_<BRANCHCODE>)
 ## and return the count of changed rows, or 0 if the password was already
-## empty/unchanged.
+## empty/unchanged.  The branchcode defaults to the one this object was built
+## for; save() passes the one it found in the YAML, because the configuration
+## page holds the settings of every branch at once.
 sub store_password {
-    my ($self, $password) = @_;
+    my ($self, $password, $branch) = @_;
     return 0 unless defined $password && length $password;
     my $dbh = C4::Context->dbh;
     my $sth = $dbh->prepare(
@@ -282,7 +393,7 @@ sub store_password {
          VALUES (?, ?, ?)
          ON DUPLICATE KEY UPDATE plugin_value = VALUES(plugin_value)"
     );
-    my $branch = $self->branch;
+    $branch = $self->branch unless defined $branch && length $branch;
     $sth->execute( $self->_plugin_class, "suomifi_rest_password_$branch", $password );
     return $dbh->rows;
 }

@@ -99,8 +99,10 @@ sub uninstall() {
 
 ## This is the configure page.  It lets the administrator view and edit the
 ## REST configuration (and optionally the REST password).  The configuration
-## is stored in plugin_data via Modules::Config, falling back to the
-## 'ksmessaging' section in koha-conf.xml when no plugin_data exists yet.
+## is stored in plugin_data via Modules::Config.  When nothing is stored there
+## yet, the plugin reads the 'ksmessaging' section of koha-conf.xml as a
+## fallback, and the button in the configuration section fills the textarea
+## with that fallback so it can be reviewed here and then saved.
 ##
 ## The page also has the Suomi.fi messaging setup, which is the one time
 ## database setup the plugin needs: Modules::Setup adds the 'suomifi' message
@@ -160,10 +162,38 @@ sub configure {
         }
         elsif ( $config->save($cgi) ) {
             $saved = 1;
+
+            # The password left the textarea on its way to its own row, so say
+            # so: a save that silently removed a secret looks like data loss.
+            push @messages, $self->_configure_message( success => 'config_51' )
+                if scalar @{ $config->moved_passwords };
         }
         else {
             push @messages, $self->_configure_message(
                 error => $self->_save_error_key( $config->last_save_error ) );
+        }
+    }
+
+    # Fill the textarea with the koha-conf.xml fallback.  This one is posted by
+    # a form of its own, so it cannot carry the YAML typed into the form above.
+    # Nothing is stored here: the text is shown for review and the administrator
+    # presses "Save configurations" to keep it, exactly as for a typed edit.
+    elsif ( $cgi->request_method eq 'POST' && $cgi->param('config_from_koha_conf') ) {
+
+        if ( !$self->_csrf_token_valid($cgi) ) {
+            push @messages, $self->_configure_message( error => 'config_18' );
+        }
+        else {
+            my $from_conf = $config->config_from_koha_conf;
+
+            if ( !defined $from_conf ) {
+                push @messages, $self->_configure_message(
+                    error => $self->_copy_error_key( $config->last_copy_error ) );
+            }
+            else {
+                $config_for_display = $from_conf;
+                push @messages, $self->_configure_message( success => 'config_47' );
+            }
         }
     }
 
@@ -175,6 +205,7 @@ sub configure {
         saved   => $saved,
         setup_status => $self->_setup_status($config),
         setup_result => $setup_result,
+        moved_passwords => $config->moved_passwords,
     );
 }
 
@@ -235,6 +266,7 @@ sub _output_configure_page {
         saved    => $params{saved},
         setup_status => $params{setup_status},
         setup_result => $params{setup_result},
+        moved_passwords => $params{moved_passwords},
     );
 
     return $self->output_html( $template->output() );
@@ -259,6 +291,18 @@ sub _save_error_key {
     return 'config_15' if $reason eq 'empty';
     return 'config_16' if $reason eq 'invalid_yaml';
     return 'config_17' if $reason eq 'not_a_mapping';
+
+    return 'config_14'; # Unknown reason, just show a generic error message
+}
+
+## Map a config_from_koha_conf() failure reason onto the i18n key that explains
+## it.  'empty' is not really a failure: it means koha-conf.xml holds no
+## ksmessaging section, so there is nothing to fill in and nothing changed.
+sub _copy_error_key {
+    my ( $self, $reason ) = @_;
+
+    return 'config_48' if $reason eq 'empty';
+    return 'config_49' if $reason eq 'invalid_yaml';
 
     return 'config_14'; # Unknown reason, just show a generic error message
 }

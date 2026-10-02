@@ -236,16 +236,28 @@ At the `letters` level, next to `branches`:
 
 ### The Suomi.fi REST password
 
-The REST password is not part of the YAML configuration and there is no password
-field on the configuration page. It is stored in `plugin_data` under
-`suomifi_rest_password_<BRANCHCODE>` and is only written by
-`change-suomifi-password.pl --write_config`, once per branch.
+The REST password is not part of the stored YAML configuration and there is no
+password field on the configuration page. It is stored in `plugin_data` under
+`suomifi_rest_password_<BRANCHCODE>`, once per branch, and
+`change-suomifi-password.pl --write_config` writes it.
 
-Before the first password change, the `rest.password` value in the YAML is used
-as a fallback. That is the bootstrap path: put the current password in the YAML,
-run the password change once with `--write_config`, and the stored password takes
-over. The password can also be kept in the `<ksmessaging>` section of
+A `rest.password` written in the YAML on the configuration page is not stored
+there. Saving the configuration moves it into the `plugin_data` row for that
+branch and stores the YAML without it, and the page reports which branches this
+happened for. That makes the YAML a place where the current password can be typed
+in without becoming part of the stored configuration. Nothing is removed unless a
+password was actually there, so saving a configuration that has no `rest.password`
+leaves an already stored password alone.
+
+This is the other bootstrap path: put the current password in the YAML, save the
+configuration page, and the stored password takes over from that point on. Before
+any password has been stored, the `rest.password` value in the YAML is used as a
+fallback. The password can also be kept in the `<ksmessaging>` section of
 `koha-conf.xml` when the configuration is not stored in `plugin_data`.
+
+Only the Suomi.fi REST password is moved this way. The iPost `customerpass` and
+the file transfer `password` have no row of their own and are read straight from
+the YAML, so they are always stored with it and are visible on the page.
 
 ### Alternative sender addresses
 
@@ -296,6 +308,15 @@ from a `<ksmessaging>` section in `koha-conf.xml`:
 
 This is only a fallback. The configuration page is the recommended place, since
 it validates the YAML and keeps all three settings in one place.
+
+The **Fill from koha-conf.xml** button on the configuration page puts the section
+into the configuration textarea. Nothing is stored until you press **Save
+configurations**, so the copy can be reviewed and edited like any other change
+before it takes effect. A `rest.password` in the section comes along, and it is
+worth removing it from the YAML and storing it with
+`change-suomifi-password.pl --write_config` instead, since the configuration page
+shows the YAML in the clear. The two Suomi.fi settings have no `koha-conf.xml`
+counterpart and are left untouched.
 
 ## Sending messages
 

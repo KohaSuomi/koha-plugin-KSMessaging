@@ -42,5 +42,12 @@
         config_41                                  = "Inställningarna nedan lagras i databasen och läses av cronjobben som skickar meddelandena. Exemplet visar formatet.",
         config_42                                  = "Meddelandetjänst",
         config_43                                  = "Meddelandeuppgifter",
+        config_44                                  = "Konfiguration i koha-conf.xml",
+        config_45                                  = "Så länge ingenting lagras i databasen läser pluginen konfigurationen från &lt;ksmessaging&gt;-avsnittet i koha-conf.xml. Här fylls fältet nedan med det avsnittet, så att du kan granska värdena och spara dem här; ingenting lagras förrän du sparar. Ett rest.password i avsnittet flyttas till en egen databasrad när du sparar och lämnas kvar i YAML-koden du ser.",
+        config_46                                  = "Fyll från koha-conf.xml",
+        config_47                                  = "Konfigurationen fylldes in från koha-conf.xml. Granska den nedan och spara den för att lagra den.",
+        config_48                                  = "Det finns inget &lt;ksmessaging&gt;-avsnitt i koha-conf.xml, så det finns inget att kopiera.",
+        config_49                                  = "Det gick inte att läsa konfigurationen från koha-conf.xml. Kontrollera felloggen.",
+        config_51                                  = "REST-lösenordet togs bort från konfigurationen och lagrades separat för:",
     }
 %]

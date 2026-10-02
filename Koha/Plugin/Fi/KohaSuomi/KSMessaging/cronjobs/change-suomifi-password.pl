@@ -98,7 +98,7 @@ try {
         print "Password stored in plugin_data (suomifi_rest_password_$branchcode).\n";
     } else {
         print "Not storing in plugin_data, use --write_config to enable this.\n";
-        print "There is no password field on the plugin configuration page, so --write_config is the only way to store it.\n";
+        print "A password that is still in the configuration YAML is moved into plugin_data the next time the configuration is saved on the plugin configuration page.\n";
     }
     $cache->clear_from_cache($config->cacheKey());
 } catch {

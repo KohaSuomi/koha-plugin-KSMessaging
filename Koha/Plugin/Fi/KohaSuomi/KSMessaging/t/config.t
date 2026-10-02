@@ -325,7 +325,7 @@ subtest 'configure page renders translated messages' => sub {
     for my $lang (qw(default fi-FI sv-SE)) {
         my $snippet = read_file("$Bin/../i18n/$lang.inc") . "\n" . $block;
 
-        for my $key (qw(config_14 config_15 config_16 config_17 config_18)) {
+        for my $key (qw(config_14 config_15 config_16 config_17 config_18 config_48 config_49)) {
             my $out = '';
             my $tpl = Template->new;
             $tpl->process(
@@ -349,6 +349,147 @@ subtest 'configure page renders translated messages' => sub {
         my ($text) = $out =~ m{<div class="alert alert-success[^"]*">(.*?)</div>}s;
         ok( length( $text // '' ), "$lang renders the success message" );
     }
+};
+
+subtest 'save moves the REST password out of the YAML' => sub {
+    my %stored;
+    my $mock = Test::MockModule->new($ConfigClass);
+    $mock->mock(
+        '_store_plugin_data',
+        sub { my ( $self, $key, $value ) = @_; $stored{$key} = $value; return 1 }
+    );
+
+    # Store the passwords where they land, so the row they are read back from
+    # can be checked.
+    my @passwords;
+    $mock->mock(
+        'store_password',
+        sub { my ( $self, $password, $branch ) = @_; push @passwords, { branch => $branch, password => $password }; return 1 }
+    );
+
+    my $config = $ConfigClass->new( {} );
+
+    # The bootstrap case: the password is in the YAML, as it is when it has been
+    # copied from koha-conf.xml.
+    ok( $config->save( { config => "suomifi:\n  branches:\n    default:\n      rest:\n        baseUrl: https://api.example/\n        username: u\n        password: s3cret\n" } ),
+        'a configuration carrying a REST password saves' );
+    is_deeply( [ map { $_->{branch} } @passwords ], ['default'], 'the password is stored for its own branch' );
+    is( $passwords[0]->{password}, 's3cret', 'the password value is stored' );
+    unlike( $stored{ksmessaging_config}, qr/s3cret/, 'the password is not left in the stored YAML' );
+    like( $stored{ksmessaging_config}, qr/baseUrl/, 'the rest of the configuration is kept' );
+    is_deeply( $config->moved_passwords, ['default'], 'the moved branch is reported' );
+
+    # Every branch gets its own row, which is what _load_plugin_password reads.
+    # The branch list is sorted rather than compared in place: keys %$branches
+    # does not iterate in a stable order.
+    @passwords = ();
+    $config->save( { config => "suomifi:\n  branches:\n    default:\n      rest:\n        password: d\n    lib1:\n      rest:\n        password: one\n" } );
+    is_deeply( [ sort map { $_->{branch} } @passwords ], [ 'default', 'lib1' ],
+        'each branch password is stored under its own branchcode' );
+    is_deeply( $config->moved_passwords, ['default','lib1'], 'moved branches are sorted' );
+
+    # The iPost and file transfer passwords have no row of their own and are read
+    # from the YAML, so they must survive.
+    @passwords = ();
+    ok( $config->save( { config => "suomifi:\n  branches:\n    default:\n      ipostpdf:\n        customerid: c\n        customerpass: ipostsecret\n      filetransfer:\n        host: h\n        password: ftsecret\n" } ),
+        'a configuration with only iPost and file transfer passwords saves' );
+    is( scalar @passwords, 0, 'no REST password row is written for them' );
+    is_deeply( $config->moved_passwords, [], 'nothing is reported as moved' );
+    like( $stored{ksmessaging_config}, qr/ipostsecret/, 'the iPost customerpass stays in the YAML' );
+    like( $stored{ksmessaging_config}, qr/ftsecret/, 'the file transfer password stays in the YAML' );
+
+    # A configuration without a password is stored byte for byte, so comments and
+    # formatting survive an ordinary save.
+    @passwords = ();
+    my $commented = "# my settings\nsuomifi:\n  branches:\n    default:\n      rest:\n        baseUrl: https://api.example/   # keep this\n";
+    ok( $config->save( { config => $commented } ), 'a configuration without a password saves' );
+    is( scalar @passwords, 0, 'no password row is written' );
+    is( $stored{ksmessaging_config}, $commented, 'the text is stored unchanged, comments included' );
+    is_deeply( $config->moved_passwords, [], 'nothing is reported as moved' );
+
+    # An absent password must not clear a row that is already stored.
+    @passwords = ();
+    $config->save( { config => "suomifi:\n  branches:\n    default:\n      rest:\n        username: u\n" } );
+    is( scalar @passwords, 0, 'saving without a password writes no row, so the stored one survives' );
+
+    # An empty password is not a password and does not strip the stored one.
+    @passwords = ();
+    $config->save( { config => "suomifi:\n  branches:\n    default:\n      rest:\n        password: ''\n" } );
+    is( scalar @passwords, 0, 'an empty password is not stored' );
+    like( $stored{ksmessaging_config}, qr/password/, 'an empty password is left in place rather than hidden' );
+
+    # Values that are not plain scalars are left alone rather than dropped.
+    @passwords = ();
+    my $structured = "suomifi:\n  branches:\n    default:\n      rest:\n        password:\n          key: value\n";
+    ok( $config->save( { config => $structured } ), 'a configuration with a structured password saves' );
+    is( scalar @passwords, 0, 'a structured password is not stored' );
+    like( $stored{ksmessaging_config}, qr/key: value/, 'a structured password is left in place' );
+
+    # The stored YAML is still a valid mapping that _load_config can read, and a
+    # rest section emptied of its password still parses.
+    @passwords = ();
+    $config->save( { config => "suomifi:\n  branches:\n    default:\n      rest:\n        password: only\n" } );
+    my $roundtrip = YAML::XS::Load( $stored{ksmessaging_config} );
+    is( ref $roundtrip, 'HASH', 'the stripped YAML is still a mapping' );
+    ok( exists $roundtrip->{suomifi}{branches}{default}{rest}, 'the rest section is kept' );
+    ok( !exists $roundtrip->{suomifi}{branches}{default}{rest}{password}, 'the password is gone from it' );
+};
+
+subtest 'config_from_koha_conf' => sub {
+    my @stored;
+    my $context_mock = Test::MockModule->new('C4::Context');
+    my $config_mock = Test::MockModule->new($ConfigClass);
+    $config_mock->mock(
+        '_store_plugin_data',
+        sub { my ( $self, $key, $value ) = @_; push @stored, { key => $key, value => $value } }
+    );
+
+    my $config = $ConfigClass->new( {} );
+
+    my $section = {
+        suomifi => { branches => { default => { stagingdir => '/tmp/x', rest => { serviceid => 'svc' } } } },
+        letters => { skipletters => 'RETURN,OVERDUE' },
+    };
+
+    $context_mock->mock( 'config', sub { return $section } );
+    my $yaml = $config->config_from_koha_conf;
+    ok( $yaml, 'a ksmessaging section is returned' );
+    is( $config->last_copy_error, undef, 'no error recorded when the YAML is returned' );
+
+    # Nothing is written.  The text goes into the textarea and the administrator
+    # saves it, so a stored configuration can never be overwritten by pressing
+    # this button.
+    is( scalar @stored, 0, 'the section is not written to plugin_data' );
+
+    # The section is serialised back to the YAML that save() stores, so what
+    # lands in the textarea is what save() can store and _load_config() can
+    # read back.
+    is_deeply( YAML::XS::Load($yaml), $section, 'the returned YAML round-trips the section' );
+    ok( $yaml =~ /^suomifi:/m, 'the returned text is the YAML that the textarea expects' );
+
+    # A rest.password in the section is offered along on purpose: once the
+    # configuration is saved into plugin_data the koha-conf.xml fallback is no
+    # longer read, so leaving the password behind would stop it from being used.
+    $context_mock->mock( 'config', sub { return { suomifi => { branches => { default => { rest => { password => 'p' } } } } } } );
+    my $with_password = $config->config_from_koha_conf;
+    is( $with_password =~ /password: p/, 1, 'the REST password comes along in the returned YAML' );
+    is( scalar @stored, 0, 'still nothing stored' );
+
+    # Nothing to offer is reported rather than returned.
+    $context_mock->mock( 'config', sub { return undef } );
+    is( $config->config_from_koha_conf, undef, 'a missing section returns undef' );
+    is( $config->last_copy_error, 'empty', 'a missing section reports the empty reason' );
+    is( scalar @stored, 0, 'nothing stored when there is nothing to offer' );
+
+    $context_mock->mock( 'config', sub { return {} } );
+    is( $config->config_from_koha_conf, undef, 'an empty section returns undef' );
+    is( $config->last_copy_error, 'empty', 'an empty section reports the empty reason' );
+    is( scalar @stored, 0, 'nothing stored for an empty section' );
+
+    $context_mock->mock( 'config', sub { return 'not a mapping' } );
+    is( $config->config_from_koha_conf, undef, 'a section that is not a mapping returns undef' );
+    is( $config->last_copy_error, 'empty', 'a section that is not a mapping reports the empty reason' );
+    is( scalar @stored, 0, 'nothing stored for a section that is not a mapping' );
 };
 
 subtest 'getSuomiFiAltSender' => sub {

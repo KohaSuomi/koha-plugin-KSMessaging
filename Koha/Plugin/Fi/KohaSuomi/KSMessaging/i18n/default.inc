@@ -42,5 +42,12 @@
         config_41                                  = "The settings below are stored in the database and are read by the cronjobs that send the messages. The example shows the format.",
         config_42                                  = "Message service",
         config_43                                  = "Message details",
+        config_44                                  = "Configuration in koha-conf.xml",
+        config_45                                  = "While nothing is stored in the database, the plugin reads the configuration from the &lt;ksmessaging&gt; section of koha-conf.xml. This fills the field below with that section so you can review the values and save them here; nothing is stored until you save. A rest.password in the section is moved into a database row of its own when you save, and left out of the YAML you can see.",
+        config_46                                  = "Fill from koha-conf.xml",
+        config_47                                  = "Configuration filled in from koha-conf.xml. Review it below and save it to store it.",
+        config_48                                  = "There is no &lt;ksmessaging&gt; section in koha-conf.xml, so there is nothing to copy.",
+        config_49                                  = "Failed to read the configuration from koha-conf.xml. Check the error log.",
+        config_51                                  = "The REST password was taken out of the configuration and stored separately for:",
     }
 %]

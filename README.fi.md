@@ -234,16 +234,28 @@ Kaikissa toimipisteosioissa yhteiset asetukset:
 
 ### Suomi.fi REST -salasana
 
-REST-salasana ei kuulu YAML-asetuksiin eikä määrityssivulla ole salasanakenttää.
-Se tallennetaan `plugin_data`-tauluun avaimella
-`suomifi_rest_password_<HAARUUDENKOODI>` ja sen kirjoittaa ainoastaan
-`change-suomifi-password.pl --write_config`, kerran haaruutta kohden.
+REST-salasana ei kuulu tallennettavaan YAML-asetukseen eikä määrityssivulla ole
+salasanakenttää. Se tallennetaan `plugin_data`-tauluun avaimella
+`suomifi_rest_password_<HAARUUDENKOODI>` kerran haaruutta kohden, ja sen kirjoittaa
+`change-suomifi-password.pl --write_config`.
 
-Ensimmäistä salasananvaihtoa ennen käytetään YAML-asetuksen `rest.password`-arvoa
-vara-arvona. Näin aloitetaan: lisää nykyinen salasana YAML-asetukseen, suorita
-salasananvaihto kerran lipulla `--write_config`, minkä jälkeen tallennettu
-salasana otetaan käyttöön. Salasanan voi säilyttää myös koha-conf.xml-tiedoston
+Määrityssivun YAML-risteykseen kirjoitettua `rest.password`-arvoa ei tallenneta
+YAML-muotoon. Asetusten tallennus siirtää sen kyseisen haaruuden
+`plugin_data`-riviin ja tallentaa YAML-muodon ilman sitä, ja sivu kertoo
+mille haaruudille näin tehtiin. Näin nykyisen salasanan voi kirjoittaa
+YAML-muotoon tulematta osaksi tallennettua asetusta. Mitään ei poisteta, ellei
+salasanaa ollut oikeasti kohdassa, joten sellaisen asetuksen tallentaminen, jossa
+`rest.password` puuttuu, jättää jo tallennetun salasanan ennalleen.
+
+Näin pääsee toiseen aloitustapaan: lisää nykyinen salasana YAML-asetukseen, tallenna
+määrityssivu, minkä jälkeen tallennettu salasana otetaan käyttöön. Ennen kuin
+salasanaa on tallennettu, käytetään YAML-asetuksen `rest.password`-arvoa
+vara-arvona. Salasanan voi säilyttää myös koha-conf.xml-tiedoston
 `<ksmessaging>`-osiossa, kun asetuksia ei tallenneta `plugin_data`-tauluun.
+
+Näin siirretään vain Suomi.fi:n REST-salasana. iPostin `customerpass`-arvolla ja
+tiedostosiirron `password`-arvolla ei ole omaa riviään, vaan ne luetaan suoraan
+YAML-muodosta, joten ne tallennetaan aina sen mukana ja ovat näkyvissä sivulla.
 
 ### Vaihtoehtoiset lähettäjäosoitteet
 
@@ -295,6 +307,15 @@ YAML-rakenteen koha-conf.xml-tiedoston `<ksmessaging>`-osiosta:
 
 Tämä on vain varavaihtoehto. Määrityssivu on suositeltava paikka, koska se
 tarkistaa YAML-syntaksin ja pitää kaikki kolme asetusta yhdessä paikassa.
+
+Määrityssivun **Täytä koha-conf.xml-tiedostosta** -painike asettaa osion
+asetuskenttään. Mitään ei tallenneta ennen kuin **Tallenna asetukset**
+-painikkeella, joten kopioinnin voi tarkistaa ja muokata kuten mitä tahansa
+muutosta ennen kuin se tulee voimaan. Osiossa oleva `rest.password` tulee mukaan,
+ja kannattaa poistaa se YAML-muodosta ja tallentaa se
+`change-suomifi-password.pl --write_config` -komennolla, koska määrityssivu
+näyttää YAML-muodon selvässä tekstissä. Kahdella Suomi.fi-asetuksella ei ole
+koha-conf.xml-vastaavaa, joten kopiointi ei koske niitä.
 
 ## Viestien lähettäminen
 
