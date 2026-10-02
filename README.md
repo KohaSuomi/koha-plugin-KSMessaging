@@ -29,7 +29,8 @@ iPost customer ID, staging directory and file transfer settings, with a shared
   a message is sent through Suomi.fi or iPost PDF. Without it, `pate.pl` does not
   start.
 - Koha with the Koha-Suomi SFTP module (`C4::KohaSuomi::SFTP`). It is used for
-  the `sftp` file transfer protocol.
+  the `sftp` file transfer protocol, and the plugin loads it at startup, so
+  `pate.pl` does not run without it.
 - Memcached configured for Koha. Suomi.fi access tokens are cached under the
   `cachekey` value from the configuration.
 - Perl modules: `Net::SFTP::Foreign`, `Net::FTP`, `PDF::API2`, `String::Random`,
@@ -225,7 +226,7 @@ Common to all branch sections:
 | --- | --- |
 | `ipostepl` | EPL output. `encoding` is `latin1` or `utf8`, `fileprefix` is prepended to the file name, and `code`, `header` and the `layout` values are written into the EPL template code (`templatecode`, `contpagecode`, `firstpage`, `otherpages`). |
 | `ipostpdf` | iPost customer, same keys as above. The letter is rendered as a PDF and zipped together with the iPost dispatch XML. |
-| `filetransfer` | Where the files are sent. `protocol` is `sftp` or `ftp`, `port` defaults to 22 or 21, and `remotedir` defaults to `~`. If `filetransfer` is missing, the letter is only written to `stagingdir` and the message is still marked as sent. |
+| `filetransfer` | Where the files are sent. `protocol` is `sftp` or `ftp`, `port` defaults to 22 or 21, and `remotedir` defaults to `~`. If `filetransfer` is missing, the letter is only written to `stagingdir` and the message is still marked as sent. A transfer to the Suomi.fi SFTP endpoint has a deadline, see [The Suomi.fi SFTP interface closes on 1.1.2027](#the-suomifi-sftp-interface-closes-on-112027). |
 
 At the `letters` level, next to `branches`:
 
@@ -252,8 +253,8 @@ leaves an already stored password alone.
 This is the other bootstrap path: put the current password in the YAML, save the
 configuration page, and the stored password takes over from that point on. Before
 any password has been stored, the `rest.password` value in the YAML is used as a
-fallback. The password can also be kept in the `<ksmessaging>` section of
-`koha-conf.xml` when the configuration is not stored in `plugin_data`.
+fallback. The password can also be kept in a `<ksmessaging>` section of
+`koha-conf.xml` until the configuration has been copied over and saved.
 
 Only the Suomi.fi REST password is moved this way. The iPost `customerpass` and
 the file transfer `password` have no row of their own and are read straight from
@@ -294,10 +295,10 @@ the value must consist of 1 to 15 uppercase letters or digits. There is no
 `default` fallback: a branch without a matching entry is sent without a cost
 pool.
 
-### Fallback: koha-conf.xml
+### Starting from koha-conf.xml
 
-If nothing is stored in `plugin_data`, the plugin reads the same YAML structure
-from a `<ksmessaging>` section in `koha-conf.xml`:
+A site that keeps its settings in `koha-conf.xml` can hold the same YAML
+structure in a `<ksmessaging>` section:
 
     <ksmessaging><![CDATA[
     suomifi:
@@ -306,8 +307,9 @@ from a `<ksmessaging>` section in `koha-conf.xml`:
           ...
     ]]></ksmessaging>
 
-This is only a fallback. The configuration page is the recommended place, since
-it validates the YAML and keeps all three settings in one place.
+The plugin does not read that section. It is a source to copy from, and the
+configuration page is where the settings live from then on, since it validates
+the YAML and keeps all three settings in one place.
 
 The **Fill from koha-conf.xml** button on the configuration page puts the section
 into the configuration textarea. Nothing is stored until you press **Save
@@ -349,6 +351,11 @@ Exactly one mode must be given per run:
 `--letters-as-suomifi-ipost` and `--letters-as-suomifi-rest` use the Suomi.fi
 section of the branch, so the Suomi.fi or iPost account belongs under
 `suomifi`, not under `letters`.
+
+The three modes that transfer a file to the print provider (`--suomifi` with an
+`ipostpdf` section, `--letters-as-suomifi-ipost` and `--letters`) work as long
+as the `filetransfer` endpoint is one that stays available. See
+[The Suomi.fi SFTP interface closes on 1.1.2027](#the-suomifi-sftp-interface-closes-on-112027).
 
 The files are written to the `stagingdir` of the branch:
 `<branchcode>-<message_id>.epl` or `<branchcode>-<message_id>.zip` with
@@ -413,11 +420,49 @@ no changes.
 The file is not executable in the repository, so run it with `perl`. Only notices
 with the `print` transport type and the status `sent` are inspected.
 
+## The Suomi.fi SFTP interface closes on 1.1.2027
+
+The old Suomi.fi viestit interfaces (WS, SFTP and SMTP) are closed on
+**1 January 2027**, after which every message to Suomi.fi has to be sent through
+the REST interface. The schedule is in the DVV notice [Use of Suomi.fi Messages
+will be transferred to the REST interface](https://kehittajille.suomi.fi/topical/use-of-suomi-fi-messages-will-be-transferred-to-the-rest-interface-see-the-transition-periods).
+
+That concerns the SFTP service Suomi.fi itself offered for the iPost material of
+the messages it printed. The `letters` interface is not that service: `--letters`
+delivers EPL files, or a PDF with the iPost dispatch XML, straight to a print
+provider over the provider's own iPost SFTP endpoint. A direct iPost agreement is
+made with the print provider, not with Suomi.fi, so it is not affected by the
+Suomi.fi shutdown.
+
+The transfer is the same SFTP transfer in both cases, so check which endpoint the
+configuration points at:
+
+| | Suomi.fi, closes on 1.1.2027 | Print provider, not affected |
+| --- | --- | --- |
+| `filetransfer.host` | the Suomi.fi/VIA service, `*.integraatiopalvelu.fi` or `*.integraatiopalvelu.vyv.fi` | the print provider's own iPost SFTP host |
+| `filetransfer.remotedir` | `/to_viestit/ipost/` | the directory the print provider gave out |
+
+When a transfer is configured, the plugin cannot tell the two endpoints apart
+from the configuration, so check this by hand rather than by reading a run log.
+
+Only a deployment that really delivers to the Suomi.fi endpoint has to change
+something, and then it moves from the file transfer to the REST interface of the
+`suomifi` section: `--letters-as-suomifi-rest` for the pending print notices and
+`--suomifi` for the notices queued for Suomi.fi. Both send the letter as a PDF,
+so a branch on such a deployment that produces EPL (`ipostepl`) would have to
+produce PDF instead. Every branch that delivers to a print provider keeps
+working as it is, over the same SFTP transfer as before.
+
+Before the REST interface is in use, DVV asks for two things: the source IP
+addresses of the server have to be authorised for the service, and TLS 1.3 is
+recommended over TLS 1.2.
+
 ## Troubleshooting
 
 - `No configuration found for ksmessaging.` — nothing is stored in
-  `plugin_data` and there is no `<ksmessaging>` section in `koha-conf.xml`. Save
-  the configuration on the plugin configuration page.
+  `plugin_data`. A `<ksmessaging>` section in `koha-conf.xml` is not read, so it
+  has to be copied over with **Fill from koha-conf.xml** and saved on the plugin
+  configuration page.
 - `The format for the branch is not configured.` — the branch has neither a
   `rest` nor an `ipostpdf` section under `suomifi`.
 - `No suomi.fi message created ... No SSN available.` — SsnProvider has no SSN

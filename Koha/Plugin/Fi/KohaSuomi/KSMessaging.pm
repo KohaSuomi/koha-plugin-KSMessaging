@@ -9,7 +9,7 @@ use base qw(Koha::Plugins::Base);
 use C4::Context;
 use utf8;
 
-## Configuration module (read/write plugin_data config, fallback to koha-conf.xml)
+## Configuration module (read/write the plugin_data config)
 use Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Config;
 ## Sets up the 'suomifi' message transport type
 use Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Setup;
@@ -99,10 +99,9 @@ sub uninstall() {
 
 ## This is the configure page.  It lets the administrator view and edit the
 ## REST configuration (and optionally the REST password).  The configuration
-## is stored in plugin_data via Modules::Config.  When nothing is stored there
-## yet, the plugin reads the 'ksmessaging' section of koha-conf.xml as a
-## fallback, and the button in the configuration section fills the textarea
-## with that fallback so it can be reviewed here and then saved.
+## is stored in plugin_data via Modules::Config.  Nothing else is read at run
+## time, so a site that keeps its settings in koha-conf.xml copies them here
+## with the button in the configuration section, reviews them and saves them.
 ##
 ## The page also has the Suomi.fi messaging setup, which is the one time
 ## database setup the plugin needs: Modules::Setup adds the 'suomifi' message
@@ -174,10 +173,11 @@ sub configure {
         }
     }
 
-    # Fill the textarea with the koha-conf.xml fallback.  This one is posted by
-    # a form of its own, so it cannot carry the YAML typed into the form above.
-    # Nothing is stored here: the text is shown for review and the administrator
-    # presses "Save configurations" to keep it, exactly as for a typed edit.
+    # Fill the textarea with the 'ksmessaging' section of koha-conf.xml.  This
+    # one is posted by a form of its own, so it cannot carry the YAML typed into
+    # the form above.  Nothing is stored here: the text is shown for review and
+    # the administrator presses "Save configurations" to keep it, exactly as for
+    # a typed edit.
     elsif ( $cgi->request_method eq 'POST' && $cgi->param('config_from_koha_conf') ) {
 
         if ( !$self->_csrf_token_valid($cgi) ) {

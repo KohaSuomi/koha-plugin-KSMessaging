@@ -17,8 +17,9 @@ our $VERSION = "1.0.0";
 
 ## Load the config. The config is stored in the plugin_data table (key
 ## 'ksmessaging_config') and the REST password separately (key
-## 'suomifi_rest_password_<BRANCHCODE>').  If there is no configuration stored
-## in plugin_data, we fall back to the 'ksmessaging' section in koha-conf.xml.
+## 'suomifi_rest_password_<BRANCHCODE>').  Without a stored configuration there
+## is nothing to read: koha-conf.xml is only a source the configuration page
+## copies from (config_from_koha_conf()), never one that is read at run time.
 sub new {
     my ($class, $params) = @_;
 
@@ -41,9 +42,9 @@ sub branch {
     return $self->{branch};
 }
 
-## Returns the full (root) configuration hashref for this interface, either
-## from plugin_data or as a fallback from koha-conf.xml.  If a branch
-## specific configuration does not exist, use the 'default' branch config.
+## Returns the full (root) configuration hashref for this interface, from
+## plugin_data.  If a branch specific configuration does not exist, use the
+## 'default' branch config.
 sub rootConfig {
     my ($self) = @_;
 
@@ -97,8 +98,8 @@ sub combineacrossbranches {
 ## Suosii is generic all-mail-config.
 ## We return the REST config for the current interface+branch.  The password
 ## is overlaid from plugin_data (suomifi_rest_password_<BRANCHCODE>) when
-## available, falling back to the 'rest' password from the config
-## (plugin_data YAML or koha-conf).
+## available, falling back to the 'rest' password from the stored
+## configuration.
 sub getRESTConfig {
     my ($self) = @_;
     return {
@@ -138,9 +139,9 @@ sub getFileTransferConfig {
 ############################################################
 
 ## Load the stored config for display on the configure page.  Only plugin_data
-## is read: the koha-conf.xml fallback reaches the page through
-## config_from_koha_conf(), so that the administrator gets it as text in the
-## textarea and decides whether to save it.
+## is read, so what the page shows is what the cronjobs will read.  A
+## koha-conf.xml section is not shown here either: it reaches the page through
+## config_from_koha_conf(), as text the administrator can review before saving.
 sub load_for_configure {
     my ($self) = @_;
     $self->{config_for_display} = $self->_load_plugin_config;
@@ -290,9 +291,9 @@ sub last_save_error {
 }
 
 ## Return the 'ksmessaging' section of koha-conf.xml as the YAML that save()
-## stores, so that the configuration page can offer the fallback as a starting
-## point for the configuration text.  Nothing is written: the text ends up in
-## the textarea and the administrator saves it like any other edit, which is
+## stores, so that the configuration page can offer it as a starting point for
+## the configuration text.  Nothing is written: the text ends up in the
+## textarea and the administrator saves it like any other edit, which is
 ## what keeps the button safe to offer while a configuration is already stored.
 ##
 ## The section is serialised as it is, so a rest.password that is part of it
@@ -339,7 +340,10 @@ sub _plugin_class {
     return 'Koha::Plugin::Fi::KohaSuomi::KSMessaging';
 }
 
-## Load the configuration: plugin_data first, then fall back to koha-conf.xml
+## Load the configuration from plugin_data.  Nothing else is read here: a
+## <ksmessaging> section in koha-conf.xml is a starting point that the
+## administrator copies onto the configuration page and saves, not a
+## configuration the cronjobs pick up on their own.
 sub _load_config {
     my ($self) = @_;
 
@@ -350,8 +354,7 @@ sub _load_config {
         return $config if $config;
     }
 
-    # Fallback to koha-conf.xml
-    return C4::Context->config('ksmessaging') || {};
+    return {};
 }
 
 sub _load_plugin_config {

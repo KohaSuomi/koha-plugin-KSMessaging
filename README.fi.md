@@ -30,7 +30,8 @@ asetuksia, ja toimipisteet joilla ei ole omia asetuksia käyttävät yhteistä
   viesti lähetetään Suomi.fin tai iPost-PDF:n kautta. Ilman sitä `pate.pl` ei
   käynnisty.
 - Koha, jossa on Koha-Suomin SFTP-moduuli (`C4::KohaSuomi::SFTP`). Sitä käytetään
-  `sftp`-tiedonsiirtoprotokollaa varten.
+  `sftp`-tiedonsiirtoprotokollaa varten, ja lisäosa lataa sen käynnistyksessä,
+  joten `pate.pl` ei käynnisty ilman sitä.
 - Memcached konfiguroituna Kohalle. Suomi.fi-käyttöoikeustunnus välitetään
   välimuistiin asetuksessa määritetyllä `cachekey`-avaimella.
 - Perl-moduulit: `Net::SFTP::Foreign`, `Net::FTP`, `PDF::API2`, `String::Random`,
@@ -223,7 +224,7 @@ Kaikissa toimipisteosioissa yhteiset asetukset:
 | --- | --- |
 | `ipostepl` | EPL-tuloste. `encoding` on `latin1` tai `utf8`, `fileprefix` lisätään tiedoston nimen alkuun, ja `code`, `header` sekä `layout`-arvot kirjoitetaan EPL-mallikoodiin (`templatecode`, `contpagecode`, `firstpage`, `otherpages`). |
 | `ipostpdf` | iPost-asiakas, samat avaimet kuin yllä. Kirje muunnetaan PDF-muotoon ja pakataan yhdessä iPost-lähetysXML:n kanssa. |
-| `filetransfer` | Minne tiedostot lähetetään. `protocol` on `sftp` tai `ftp`, `port` on oletuksena 22 tai 21 ja `remotedir` oletuksena `~`. Jos `filetransfer` puuttuu, kirje kirjoitetaan vain hakemistoon `stagingdir` ja viesti merkitään silti lähetetyksi. |
+| `filetransfer` | Minne tiedostot lähetetään. `protocol` on `sftp` tai `ftp`, `port` on oletuksena 22 tai 21 ja `remotedir` oletuksena `~`. Jos `filetransfer` puuttuu, kirje kirjoitetaan vain hakemistoon `stagingdir` ja viesti merkitään silti lähetetyksi. Siirrolla Suomi.fin SFTP-palvelimeen on määräaika, katso [Suomi.fi:n SFTP-rajapinta sulkeutuu 1.1.2027](#suomifin-sftp-rajapinta-sulkeutuu-112027). |
 
 `letters`-tasolla, `branches`-hakemiston vieressä:
 
@@ -251,7 +252,8 @@ Näin pääsee toiseen aloitustapaan: lisää nykyinen salasana YAML-asetukseen,
 määrityssivu, minkä jälkeen tallennettu salasana otetaan käyttöön. Ennen kuin
 salasanaa on tallennettu, käytetään YAML-asetuksen `rest.password`-arvoa
 vara-arvona. Salasanan voi säilyttää myös koha-conf.xml-tiedoston
-`<ksmessaging>`-osiossa, kun asetuksia ei tallenneta `plugin_data`-tauluun.
+`<ksmessaging>`-osiossa siihen asti, kun asetukset on kopioitu määrityssivulle
+ja tallennettu.
 
 Näin siirretään vain Suomi.fi:n REST-salasana. iPostin `customerpass`-arvolla ja
 tiedostosiirron `password`-arvolla ei ole omaa riviään, vaan ne luetaan suoraan
@@ -293,10 +295,10 @@ ja arvon on koostuttava 1–15 suura kirjaimesta tai numerosta. Oletusosiota ei
 ole: toimipisteelle, jolle ei löydy osumaa, viesti lähetetään ilman
 kustannuspoolia.
 
-### Varavaihtoehto: koha-conf.xml
+### Aloitus koha-conf.xml-tiedostosta
 
-Jos mitään ei tallenneta `plugin_data`-tauluun, lisäosa lukee saman
-YAML-rakenteen koha-conf.xml-tiedoston `<ksmessaging>`-osiosta:
+Sivustolla voi olla samat YAML-asetukset koha-conf.xml-tiedoston
+`<ksmessaging>`-osiossa:
 
     <ksmessaging><![CDATA[
     suomifi:
@@ -305,8 +307,9 @@ YAML-rakenteen koha-conf.xml-tiedoston `<ksmessaging>`-osiosta:
           ...
     ]]></ksmessaging>
 
-Tämä on vain varavaihtoehto. Määrityssivu on suositeltava paikka, koska se
-tarkistaa YAML-syntaksin ja pitää kaikki kolme asetusta yhdessä paikassa.
+Lisäosa ei lue tätä osiota. Se on lähde, josta kopioidaan, ja sen jälkeen
+asetukset ovat määrityssivulla, koska se tarkistaa YAML-syntaksin ja pitää
+kaikki kolme asetusta yhdessä paikassa.
 
 Määrityssivun **Täytä koha-conf.xml-tiedostosta** -painike asettaa osion
 asetuskenttään. Mitään ei tallenneta ennen kuin **Tallenna asetukset**
@@ -350,6 +353,11 @@ Yhdessä ajossa on annettava täsmälleen yksi tila:
 `--letters-as-suomifi-ipost` ja `--letters-as-suomifi-rest` käyttävät toimipisteen
 `suomifi`-osiota, joten Suomi.fi- tai iPost-tili kuuluu kohtaan `suomifi`, ei
 kohtaan `letters`.
+
+Kolme tiedoston tulostuspalvelulle siirtävää tilaa (`--suomifi`, kun toimipisteellä
+on `ipostpdf`-osio, `--letters-as-suomifi-ipost` ja `--letters`) toimivat niin
+kauan kuin `filetransfer`-asetuksen päätepiste on käytettävissä. Katso
+[Suomi.fi:n SFTP-rajapinta sulkeutuu 1.1.2027](#suomifin-sftp-rajapinta-sulkeutuu-112027).
 
 Tiedostot kirjoitetaan toimipisteen hakemistoon `stagingdir`:
 `<toimipisteen koodi>-<viestin tunnus>.epl` tai
@@ -416,11 +424,48 @@ Tiedosto ei ole skriptipakettin repositoryssa suoritettavissa, joten aja se
 valinnalla `perl`. Vain ilmoituksia, joiden viestityyppi on `print` ja tila
 `sent`, tarkastetaan.
 
+## Suomi.fi:n SFTP-rajapinta sulkeutuu 1.1.2027
+
+Suomi.fi-viestien vanhat rajapinnat (WS, SFTP ja SMTP) sulkeutuvat
+**1. tammikuuta 2027**, minkä jälkeen kaikki Suomi.fiin menevät viestit on
+lähetettävä REST-rajapinnan kautta. Aikataulu on DVV:n tiedotteessa [Suomi.fi-viestien
+käyttö siirtyy REST-rajapintaansa](https://kehittajille.suomi.fi/topical/use-of-suomi-fi-messages-will-be-transferred-to-the-rest-interface-see-the-transition-periods).
+
+Kyse on SFTP-palvelusta, jonka Suomi.fi tarjosi omien viestiensä iPost-materiaalin
+toimittamiseen. `letters`-rajapinta ei ole tällainen palvelu: `--letters` toimittaa
+EPL-tiedostot tai PDF:n iPost-lähetysXML:n kanssa suoraan tulostuspalvelulle,
+palvelun omalla iPostin SFTP-päätepisteellä. Suora iPost-sopimus tehdään
+tulostuspalvelun kanssa ei Suomi.fin kanssa, joten Suomi.fin rajapintojen
+sulkeutuminen ei vaikuta siihen.
+
+Siirto on molemmilla tavalla sama SFTP-siirto, joten tarkista mihin päätepisteeseen
+asetukset osoittavat:
+
+| | Suomi.fi, sulkeutuu 1.1.2027 | Tulostuspalvelu, ei vaikuta |
+| --- | --- | --- |
+| `filetransfer.host` | Suomi.fi/VIA-palvelu, `*.integraatiopalvelu.fi` tai `*.integraatiopalvelu.vyv.fi` | tulostuspalvelun oma iPostin SFTP-palvelin |
+| `filetransfer.remotedir` | `/to_viestit/ipost/` | tulostuspalvelun antama hakemisto |
+
+Kun siirto on määritetty, lisäosa ei pysty erottamaan päätepisteitä toisistaan
+asetusten perusteella, joten tämä on tarkistettava käsin eikä ajojen lokeista.
+
+Vain sellaisessa ympäristössä, joka todella toimittaa Suomi.fin päätepisteelle,
+on jotain tehtävä, ja siinä siirrytään tiedostosiirrosta `suomifi`-osion
+REST-rajapintaan: `--letters-as-suomifi-rest` odottaville tulostusilmoituksille ja
+`--suomifi` Suomi.fille jonotetuille ilmoituksille. Molemmat lähettävät kirjeen
+PDF:nä, joten sellaisessa ympäristössä EPL:ää tuottavan toimipisteen
+(`ipostepl`) on tuotettava PDF. Jokainen toimipiste, joka toimittaa
+tulostuspalvelulle, toimii jatkossa kuten ennenkin, samoilla SFTP-siirroilla.
+
+Ennen REST-rajapinnan käyttöönottoa DVV pyytää kahta asiaa: palvelimen lähde-IP-osoitteet
+on valtuutettava palvelulle, ja TLS 1.3 on suositeltavampi kuin TLS 1.2.
+
 ## Vianetsintä
 
 - `No configuration found for ksmessaging.` — `plugin_data`-tauluun ei ole
-  tallennettu mitään eikä koha-conf.xml-tiedostossa ole `<ksmessaging>`-osiota.
-  Tallenna asetus lisäosan määrityssivulta.
+  tallennettu mitään. koha-conf.xml-tiedoston `<ksmessaging>`-osiota ei lueta, vaan
+  se on kopioitava **Täytä koha-conf.xml-tiedostosta** -painikkeella ja
+  tallennettava lisäosan määrityssivulta.
 - `The format for the branch is not configured.` — toimipisteellä ei ole
   `rest`- eikä `ipostpdf`-osiota kohtaan `suomifi`.
 - `No suomi.fi message created ... No SSN available.` — SsnProviderilla ei ole

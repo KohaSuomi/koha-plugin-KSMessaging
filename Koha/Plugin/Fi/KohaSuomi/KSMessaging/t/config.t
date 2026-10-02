@@ -467,9 +467,9 @@ subtest 'config_from_koha_conf' => sub {
     is_deeply( YAML::XS::Load($yaml), $section, 'the returned YAML round-trips the section' );
     ok( $yaml =~ /^suomifi:/m, 'the returned text is the YAML that the textarea expects' );
 
-    # A rest.password in the section is offered along on purpose: once the
-    # configuration is saved into plugin_data the koha-conf.xml fallback is no
-    # longer read, so leaving the password behind would stop it from being used.
+    # A rest.password in the section is offered along on purpose: the section is
+    # the only place it can come from, and leaving it behind would stop it from
+    # being used.
     $context_mock->mock( 'config', sub { return { suomifi => { branches => { default => { rest => { password => 'p' } } } } } } );
     my $with_password = $config->config_from_koha_conf;
     is( $with_password =~ /password: p/, 1, 'the REST password comes along in the returned YAML' );
@@ -593,6 +593,33 @@ subtest 'getSuomiFiCostPool' => sub {
     open STDOUT, '>', '/dev/null' or die $!;
     $stored = "foo: [broken";
     is( $config->getSuomiFiCostPool, undef, 'invalid YAML returns undef' );
+};
+
+subtest '_load_config' => sub {
+    my $config_mock = Test::MockModule->new($ConfigClass);
+    my $context_mock = Test::MockModule->new('C4::Context');
+
+    # koha-conf.xml is a source to copy from, not one that is read: with nothing
+    # stored there is no configuration at all, even when the file has a
+    # <ksmessaging> section, and pate.pl's guard message is the way that is
+    # reported.
+    $context_mock->mock( 'config', sub { return { suomifi => { branches => { default => { stagingdir => '/tmp/x' } } } } } );
+
+    $config_mock->mock( '_load_plugin_config', sub { return undef } );
+    my $config = $ConfigClass->new( {} );
+    is_deeply( $config->_load_config, {}, 'nothing stored means no configuration' );
+    is( $config->rootConfig, undef, 'no branch configuration without a stored one' );
+
+    $config_mock->mock( '_load_plugin_config', sub { return "  \n" } );
+    is_deeply( $ConfigClass->new( {} )->_load_config, {}, 'blank stored text means no configuration' );
+
+    $config_mock->mock( '_load_plugin_config', sub { return "suomifi: [broken\n" } );
+    is_deeply( $ConfigClass->new( {} )->_load_config, {}, 'unparsable stored text means no configuration' );
+
+    # A stored configuration is read from plugin_data, and C4::Context->config is
+    # not consulted for it.
+    $config_mock->mock( '_load_plugin_config', sub { return "suomifi:\n  branches:\n    default:\n      stagingdir: /tmp/stored\n" } );
+    is( $ConfigClass->new( {} )->stagingDir, '/tmp/stored', 'the stored configuration is used' );
 };
 
 subtest 'load_for_configure' => sub {
