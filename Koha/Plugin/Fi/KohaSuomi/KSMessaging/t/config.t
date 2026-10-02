@@ -351,6 +351,38 @@ subtest 'configure page renders translated messages' => sub {
     }
 };
 
+subtest 'configure page warns about a koha-conf.xml section that is still there' => sub {
+
+    # The warning is the whole indication that a section in koha-conf.xml is
+    # being ignored, so render it: an empty div or a bare i18n key reads as
+    # nothing being wrong, when what is wrong is that the settings are ignored.
+    my $tt = read_file("$Bin/../config.tt");
+
+    my ($warn_block) = $tt =~ /(\[% IF koha_conf_section %\].*?\[% END %\])/s;
+    ok( $warn_block, 'config.tt has the notice about a section that is still there' );
+    like( $warn_block, qr/T\.config_53/,   'the notice uses config_53' );
+    like( $warn_block, qr/alert-warning/, 'the notice is a warning' );
+    unlike( $tt, qr/T\.config_52/,       'no always-on notice is shown' );
+
+    for my $lang (qw(default fi-FI sv-SE)) {
+        my $snippet = read_file("$Bin/../i18n/$lang.inc") . "\n" . $warn_block;
+
+        my $out = '';
+        my $tpl = Template->new;
+        $tpl->process( \$snippet, { koha_conf_section => 1 }, \$out ) or die $tpl->error;
+
+        my ($warn) = $out =~ m{<div class="alert alert-warning[^"]*">(.*?)</div>}s;
+        ok( length( $warn // '' ), "$lang renders text for config_53" );
+        isnt( $warn, 'config_53', "$lang does not fall back to the bare key config_53" );
+
+        # A site with no section in koha-conf.xml has nothing to migrate, so
+        # there is nothing to warn about
+        my $out_without = '';
+        $tpl->process( \$snippet, { koha_conf_section => 0 }, \$out_without ) or die $tpl->error;
+        unlike( $out_without, qr/alert-warning/, "$lang is not warned about a section that is not there" );
+    }
+};
+
 subtest 'save moves the REST password out of the YAML' => sub {
     my %stored;
     my $mock = Test::MockModule->new($ConfigClass);
@@ -433,6 +465,26 @@ subtest 'save moves the REST password out of the YAML' => sub {
     is( ref $roundtrip, 'HASH', 'the stripped YAML is still a mapping' );
     ok( exists $roundtrip->{suomifi}{branches}{default}{rest}, 'the rest section is kept' );
     ok( !exists $roundtrip->{suomifi}{branches}{default}{rest}{password}, 'the password is gone from it' );
+};
+
+subtest 'koha_conf_section_present' => sub {
+    my $context_mock = Test::MockModule->new('C4::Context');
+    my $config = $ConfigClass->new( {} );
+
+    $context_mock->mock( 'config', sub { return { suomifi => { branches => { default => {} } } } } );
+    is( $config->koha_conf_section_present, 1, 'a ksmessaging section is reported' );
+
+    $context_mock->mock( 'config', sub { return undef } );
+    is( $config->koha_conf_section_present, 0, 'a missing section is not reported' );
+
+    $context_mock->mock( 'config', sub { return {} } );
+    is( $config->koha_conf_section_present, 0, 'an empty section is not reported' );
+
+    $context_mock->mock( 'config', sub { return 'not a mapping' } );
+    is( $config->koha_conf_section_present, 0, 'a section that is not a mapping is not reported' );
+
+    # Asking the question must not disturb the copy operation's own error
+    is( $config->last_copy_error, undef, 'asking leaves last_copy_error alone' );
 };
 
 subtest 'config_from_koha_conf' => sub {

@@ -311,14 +311,14 @@ Lisäosa ei lue tätä osiota. Se on lähde, josta kopioidaan, ja sen jälkeen
 asetukset ovat määrityssivulla, koska se tarkistaa YAML-syntaksin ja pitää
 kaikki kolme asetusta yhdessä paikassa.
 
-Määrityssivun **Täytä koha-conf.xml-tiedostosta** -painike asettaa osion
-asetuskenttään. Mitään ei tallenneta ennen kuin **Tallenna asetukset**
--painikkeella, joten kopioinnin voi tarkistaa ja muokata kuten mitä tahansa
-muutosta ennen kuin se tulee voimaan. Osiossa oleva `rest.password` tulee mukaan,
-ja kannattaa poistaa se YAML-muodosta ja tallentaa se
-`change-suomifi-password.pl --write_config` -komennolla, koska määrityssivu
-näyttää YAML-muodon selvässä tekstissä. Kahdella Suomi.fi-asetuksella ei ole
-koha-conf.xml-vastaavaa, joten kopiointi ei koske niitä.
+Määrityssivu varoittaa, kun osio on edelleen koha-conf.xml-tiedostossa, jolloin
+sen arvoja ei käytetä. Kopioi arvot asetuskenttään ja paina **Tallenna asetukset**;
+ennen sitä mitään ei lueta.
+Osiossa oleva `rest.password` tulee mukaan, ja kannattaa poistaa se
+YAML-muodosta ja tallentaa se `change-suomifi-password.pl --write_config`
+-komennolla, koska määrityssivu näyttää YAML-muodon selvässä tekstissä. Kahdella
+Suomi.fi-asetuksella ei ole koha-conf.xml-vastaavaa, joten kopiointi ei koske
+niitä.
 
 ## Viestien lähettäminen
 
@@ -464,8 +464,8 @@ on valtuutettava palvelulle, ja TLS 1.3 on suositeltavampi kuin TLS 1.2.
 
 - `No configuration found for ksmessaging.` — `plugin_data`-tauluun ei ole
   tallennettu mitään. koha-conf.xml-tiedoston `<ksmessaging>`-osiota ei lueta, vaan
-  se on kopioitava **Täytä koha-conf.xml-tiedostosta** -painikkeella ja
-  tallennettava lisäosan määrityssivulta.
+  se on kopioitava lisäosan määrityssivun asetuskenttään ja tallennettava
+  sinne.
 - `The format for the branch is not configured.` — toimipisteellä ei ole
   `rest`- eikä `ipostpdf`-osiota kohtaan `suomifi`.
 - `No suomi.fi message created ... No SSN available.` — SsnProviderilla ei ole

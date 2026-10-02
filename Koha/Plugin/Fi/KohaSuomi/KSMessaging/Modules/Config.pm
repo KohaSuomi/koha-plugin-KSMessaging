@@ -290,6 +290,21 @@ sub last_save_error {
     return $self->{last_save_error};
 }
 
+## Whether koha-conf.xml still holds a 'ksmessaging' section.  The plugin does
+## not read it, so this is only used by the configuration page to tell an
+## administrator that there are settings in koha-conf.xml that nothing is
+## reading any more.
+##
+## Kept apart from config_from_koha_conf() on purpose: asking this question
+## must not overwrite last_copy_error, which belongs to the copy operation.
+sub koha_conf_section_present {
+    my ($self) = @_;
+
+    my $config = C4::Context->config('ksmessaging');
+
+    return ( ref $config eq 'HASH' && scalar keys %$config ) ? 1 : 0;
+}
+
 ## Return the 'ksmessaging' section of koha-conf.xml as the YAML that save()
 ## stores, so that the configuration page can offer it as a starting point for
 ## the configuration text.  Nothing is written: the text ends up in the

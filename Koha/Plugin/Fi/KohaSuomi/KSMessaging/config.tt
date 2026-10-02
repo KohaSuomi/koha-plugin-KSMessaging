@@ -45,13 +45,6 @@
     margin-bottom: 0;
     max-width: 44rem;
 }
-/* The fill form sits in the right rail of the header, beside the heading, so it
-   stays out of the way of the editor below instead of pushing it down.  The
-   basis matches the status strip further down, so the two right rails line up,
-   and the long hint needs the width to avoid wrapping into a column of slivers. */
-.ksmessaging-fill-card {
-    flex: 0 1 32rem;
-}
 .ksmessaging-config-form fieldset.rows {
     margin-bottom: 1.25rem;
 }
@@ -212,17 +205,15 @@
                             <h1>[% T.config_1 %]</h1>
                             <p class="help-block">[% T.config_41 %]</p>
                         </div>
-                        <form method="post" class="validated ksmessaging-action-card ksmessaging-fill-card">
-                            [% INCLUDE 'csrf-token.inc' %]
-
-                            <input type="hidden" name="class" value="[% CLASS | html %]"/>
-                            <input type="hidden" name="method" value="[% METHOD | html %]"/>
-
-                            <h3>[% T.config_44 %]</h3>
-                            <p class="hint">[% T.config_45 %]</p>
-                            <input type="submit" name="config_from_koha_conf" value="[% T.config_46 %]" class="btn btn-default" />
-                        </form>
                     </div>
+
+                    [% # koha-conf.xml is not read any more, so a 'ksmessaging'
+                       # section that is still there is worth warning about: those
+                       # are settings the site looks configured but has not.  A site
+                       # without one has nothing to be told about it. %]
+                    [% IF koha_conf_section %]
+                        <div class="alert alert-warning mt-3">[% T.config_53 %]</div>
+                    [% END %]
 
                     <form method="post" class="validated ksmessaging-config-form">
                         [% INCLUDE 'csrf-token.inc' %]

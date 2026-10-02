@@ -49,5 +49,6 @@
         config_48                                  = "Det finns inget &lt;ksmessaging&gt;-avsnitt i koha-conf.xml, så det finns inget att kopiera.",
         config_49                                  = "Det gick inte att läsa konfigurationen från koha-conf.xml. Kontrollera felloggen.",
         config_51                                  = "REST-lösenordet togs bort från konfigurationen och lagrades separat för:",
+        config_53                                  = "Pluginet läser inte längre avsnittet &lt;ksmessaging&gt; i koha-conf.xml, och det finns fortfarande kvar: värdena ignoreras. Kopiera de du behöver till fältet nedan och spara dem.",
     }
 %]

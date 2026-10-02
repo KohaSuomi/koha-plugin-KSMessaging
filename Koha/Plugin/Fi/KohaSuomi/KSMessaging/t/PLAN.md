@@ -65,7 +65,16 @@ BEGIN {
   `getFileTransferConfig`; `getSuomiFiAltSender`/`getSuomiFiCostPool` against
   mocked `C4::Context->preference` (lang section, branch section, `default`,
   invalid YAML, non-hash, `costPool` code regex `/^[A-Z0-9]+$/`);
-  `load_for_configure` + display getters.
+  `load_for_configure` + display getters; `koha_conf_section_present`
+  (a section, a missing section, an empty one, one that is not a mapping, and
+  that asking it leaves `last_copy_error` alone).
+- **config.tt rendering** — the one notice that says a `<ksmessaging>` section
+  in koha-conf.xml is being ignored: `config_53`, under
+  `[% IF koha_conf_section %]` and nothing else.  It is rendered against the
+  real `default`/`fi-FI`/`sv-SE` i18n files, since a block that renders empty or
+  falls back to the bare key says nothing at all, and a site whose settings are
+  being ignored must not read "no problem".  There is deliberately no always-on
+  notice: a site with no section in koha-conf.xml has nothing to be told.
 
 - **setup.t** — `Modules::Setup` and the Suomi.fi messaging setup on the
   configure page.  The database is a fake handle (`TestDBH`/`TestSTH` in the
@@ -93,7 +102,8 @@ BEGIN {
     CSRF token runs none of the three and reports `config_18`; a failing setup
     is reported as an error without claiming any transports were added; a GET
     renders the transport type, the transport count and the preference state and
-    changes nothing.
+    changes nothing; `koha_conf_section` is passed to the template as the flag
+    it is, and reporting it changes nothing.
 
 - **epl.t** — mock `_epl_config` to a fixture
   `{ code=>'SOME', layout=>{ templatecode=>'TPL9', contpagecode=>'CONT',

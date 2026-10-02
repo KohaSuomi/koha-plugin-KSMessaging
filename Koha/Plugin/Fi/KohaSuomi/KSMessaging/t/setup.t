@@ -350,6 +350,10 @@ sub run_configure {
     $config_mock->mock( 'loadedCostPoolForDisplay',   sub { return '' } );
     $config_mock->mock( 'suomifiMessagingEnabled',     sub { return $prefs{SuomiFiMessaging} } );
     $config_mock->mock(
+        'koha_conf_section_present',
+        sub { return $args{koha_conf_section} ? 1 : 0 }
+    );
+    $config_mock->mock(
         'setSuomiFiMessaging',
         sub {
             my ( $config, $enabled ) = @_;
@@ -515,6 +519,17 @@ subtest 'configure: the page renders the status without a submission' => sub {
         'the preference status is shown' );
     ok( !$result->{template}->{setup_result}, 'no result is reported' );
     ok( !$result->{template}->{saved},        'nothing was saved' );
+};
+
+subtest 'configure: the page says that koha-conf.xml is not read' => sub {
+    my $without = run_configure();
+    is( $without->{template}->{koha_conf_section}, 0,
+        'no section in koha-conf.xml is reported as none' );
+
+    my $with = run_configure( koha_conf_section => 1 );
+    is( $with->{template}->{koha_conf_section}, 1,
+        'a section in koha-conf.xml is reported, so the page can warn about it' );
+    is_deeply( $with->{calls}, [], 'reporting it changes nothing' );
 };
 
 done_testing();

@@ -311,14 +311,14 @@ The plugin does not read that section. It is a source to copy from, and the
 configuration page is where the settings live from then on, since it validates
 the YAML and keeps all three settings in one place.
 
-The **Fill from koha-conf.xml** button on the configuration page puts the section
-into the configuration textarea. Nothing is stored until you press **Save
-configurations**, so the copy can be reviewed and edited like any other change
-before it takes effect. A `rest.password` in the section comes along, and it is
+The configuration page warns when the section is still in `koha-conf.xml`,
+because those values are then ignored. Copy them into the configuration field
+and press **Save configurations**; nothing reads them before that. A
+`rest.password` in the section comes along, and it is
 worth removing it from the YAML and storing it with
-`change-suomifi-password.pl --write_config` instead, since the configuration page
-shows the YAML in the clear. The two Suomi.fi settings have no `koha-conf.xml`
-counterpart and are left untouched.
+`change-suomifi-password.pl --write_config` instead, since the
+configuration page shows the YAML in the clear. The two Suomi.fi settings have no
+`koha-conf.xml` counterpart and are left untouched.
 
 ## Sending messages
 
@@ -461,8 +461,8 @@ recommended over TLS 1.2.
 
 - `No configuration found for ksmessaging.` — nothing is stored in
   `plugin_data`. A `<ksmessaging>` section in `koha-conf.xml` is not read, so it
-  has to be copied over with **Fill from koha-conf.xml** and saved on the plugin
-  configuration page.
+  has to be copied into the field on the plugin configuration page and saved
+  there.
 - `The format for the branch is not configured.` — the branch has neither a
   `rest` nor an `ipostpdf` section under `suomifi`.
 - `No suomi.fi message created ... No SSN available.` — SsnProvider has no SSN

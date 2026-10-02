@@ -100,8 +100,8 @@ sub uninstall() {
 ## This is the configure page.  It lets the administrator view and edit the
 ## REST configuration (and optionally the REST password).  The configuration
 ## is stored in plugin_data via Modules::Config.  Nothing else is read at run
-## time, so a site that keeps its settings in koha-conf.xml copies them here
-## with the button in the configuration section, reviews them and saves them.
+## time, so the page warns when koha-conf.xml still holds a 'ksmessaging'
+## section, because those values are no longer used.
 ##
 ## The page also has the Suomi.fi messaging setup, which is the one time
 ## database setup the plugin needs: Modules::Setup adds the 'suomifi' message
@@ -206,6 +206,7 @@ sub configure {
         setup_status => $self->_setup_status($config),
         setup_result => $setup_result,
         moved_passwords => $config->moved_passwords,
+        koha_conf_section => $config->koha_conf_section_present,
     );
 }
 
@@ -267,6 +268,7 @@ sub _output_configure_page {
         setup_status => $params{setup_status},
         setup_result => $params{setup_result},
         moved_passwords => $params{moved_passwords},
+        koha_conf_section => $params{koha_conf_section},
     );
 
     return $self->output_html( $template->output() );

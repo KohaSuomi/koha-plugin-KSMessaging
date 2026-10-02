@@ -49,5 +49,6 @@
         config_48                                  = "koha-conf.xml-tiedostossa ei ole &lt;ksmessaging&gt;-osiota, joten kopioitavaa ei ole.",
         config_49                                  = "Asetusten lukeminen koha-conf.xml-tiedostosta epäonnistui. Tarkista virheloki.",
         config_51                                  = "REST-salasana poistettiin asetuksista ja tallennettiin erilleen seuraaville toimipisteille:",
+        config_53                                  = "Lisäosa ei enää lue koha-conf.xml-tiedoston &lt;ksmessaging&gt;-osiota, ja se on edelleen kohdassa, jolloin sen arvot jätetään huomiotta. Kopioi tarvitsemasi arvot alle olevaan kenttään ja tallenna ne.",
     }
 %]

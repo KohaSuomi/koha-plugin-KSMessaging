@@ -49,5 +49,6 @@
         config_48                                  = "There is no &lt;ksmessaging&gt; section in koha-conf.xml, so there is nothing to copy.",
         config_49                                  = "Failed to read the configuration from koha-conf.xml. Check the error log.",
         config_51                                  = "The REST password was taken out of the configuration and stored separately for:",
+        config_53                                  = "The plugin no longer reads the &lt;ksmessaging&gt; section of koha-conf.xml, and it is still there: its values are ignored. Copy the ones you need into the field below and save them.",
     }
 %]
