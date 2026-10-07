@@ -50,8 +50,7 @@ sub fetchAccessToken {
     if ($res->is_success) {
         return decode_json($res->content);
     } else {
-        print "Error: ". $res->content . "\n";
-        die $res->status_line;
+        _fail($res);
     }
 }
 
@@ -74,8 +73,7 @@ sub changePassword {
     if ($res->is_success) {
         return decode_json($res->content);
     } else {
-        print "Error: ". $res->content . "\n";
-        die $res->status_line;
+        _fail($res);
     }
 }
 
@@ -108,9 +106,61 @@ sub send {
         my $json = decode_json($res->content);
         return $json;
     } else {
-        print "Error: ". $res->content . "\n";
-        die $res->status_line;
+        _fail($res);
     }
+}
+
+sub _fail {
+    my ($res) = @_;
+    print "Error: ". $res->content . "\n";
+    my $message = $res->status_line;
+    my $detail = _errorMessage($res);
+    $message .= ': '.$detail if length $detail;
+    die $message."\n";
+}
+
+sub _errorMessage {
+    my ($res) = @_;
+    my $content = $res->content;
+    my $json = eval { decode_json($content) };
+    return $content unless defined $json;
+    return $json unless ref $json;
+    return $content unless ref $json eq 'HASH';
+
+    my @parts;
+    foreach my $key (qw( reason message error detail title errorMessage )) {
+        push @parts, $json->{$key} if _isText($json->{$key});
+    }
+    foreach my $key (qw( validationErrors errors )) {
+        my $errors = $json->{$key};
+        if (ref $errors eq 'ARRAY') {
+            foreach my $item (@$errors) {
+                if (_isText($item)) {
+                    push @parts, $item;
+                } elsif (ref $item eq 'HASH') {
+                    push @parts, grep { _isText($_) } @{$item}{qw( error message reason default )};
+                }
+            }
+        } elsif (ref $errors eq 'HASH') {
+            foreach my $field (sort keys %$errors) {
+                my $message = $errors->{$field};
+                if (ref $message eq 'ARRAY') {
+                    my @msgs = grep { _isText($_) } @$message;
+                    push @parts, @msgs ? "$field: " . join(' ', @msgs) : $field;
+                } else {
+                    push @parts, _isText($message) ? "$field: $message" : $field;
+                }
+            }
+        }
+    }
+    my %seen;
+    @parts = grep { !$seen{$_}++ } @parts;
+    return @parts ? join('; ', @parts) : $content;
+}
+
+sub _isText {
+    my ($value) = @_;
+    return defined $value && !ref $value && $value ne '';
 }
 
 sub get {
@@ -125,8 +175,7 @@ sub get {
     if ($res->is_success) {
         return decode_json($res->content);
     } else {
-        print "Error: ". $res->content . "\n";
-        die $res->status_line;
+        _fail($res);
     }
 }
 
