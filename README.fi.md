@@ -35,8 +35,9 @@ asetuksia, ja toimipisteet joilla ei ole omia asetuksia käyttävät yhteistä
 - Memcached konfiguroituna Kohalle. Suomi.fi-käyttöoikeustunnus välitetään
   välimuistiin asetuksessa määritetyllä `cachekey`-avaimella.
 - Perl-moduulit: `Net::SFTP::Foreign`, `Net::FTP`, `PDF::API2`, `String::Random`,
-  `Text::Unaccent`, `YAML::XS`, `XML::Simple`, `File::Slurp`, `HTML::Template`,
-  `Archive::Zip` ja `LWP::UserAgent`.
+  `Text::Unaccent`, `YAML::XS`, `XML::LibXML`, `File::Slurp`, `HTML::Template`,
+  `Archive::Zip` ja `LWP::UserAgent`. `XML::LibXML` on Kohan oma riippuvuus, joten
+  se on yleensä jo asennettu.
 - Välitiedostonhakemisto, johon `koha`-käyttäjä voi kirjoittaa, sekä kirjoitettava
   `/var/spool/koha` Suomi.fi-salasanan varmuuskopioa varten.
 

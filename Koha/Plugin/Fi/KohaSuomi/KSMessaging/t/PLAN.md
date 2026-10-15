@@ -19,6 +19,7 @@ Koha/Plugin/Fi/KohaSuomi/KSMessaging/t/
 ├── epl.t
 ├── suomifi.t
 ├── rest.t
+├── dispatchxml.t
 └── file.t
 ```
 
@@ -140,6 +141,23 @@ BEGIN {
   `baseUrl . endpoint` -> expect double slash `https://suomi.example/` +
   `/v1/...`.
 
+- **dispatchxml.t** — `Deliver::DispatchXML` with `Koha::Patrons->find` and the
+  Config class mocked (Test::MockObject for the borrower and the config,
+  Test::MockModule for `find` and `Config->new`), the same way suomifi.t does.
+  - `_escape_value`: `undef` and `''` -> `''`, `&`/`<`/`>`/`"` escaped, `&` of an
+    existing entity escaped as well, `ö` and `€` as numeric character
+    references, tab and newline as `&#9;`/`&#10;`, and the characters XML 1.0
+    does not allow dropped.
+  - `DispatchXML` output is ASCII only and parses with
+    `XML::LibXML->new->load_xml`, and every attribute it puts on the way to the
+    template parses back to the string it went in as: a name and an address
+    with `&`, `"`, `<`, `ö` and `€`, a customer password with a quote, a
+    subject with markup characters. That round trip is the property iPost
+    depends on, so it is what the assertions are about and not the exact
+    spelling of the escaping.
+  - missing values (no address, no SSN, no subject, empty iPost config) render
+    as empty attributes and the document still parses.
+
 - **file.t** — mock `_deliver_config` to a Test::MockObject whose `stagingDir`
   is a `File::Temp` dir. `WriteiPostEPL` latin1 (ASCII preserved, `\x{f6}`
   byte `f6`; `\x{20ac}` -> `?`, warn suppressed via `local $SIG{__WARN__}`);
@@ -153,8 +171,8 @@ BEGIN {
 
 ## Out of scope
 
-CreateLetters/SendMessages/DispatchXML/PDF rendering logic, DB integration
-tests, cronjobs.
+CreateLetters/SendMessages/PDF rendering logic, DB integration tests,
+cronjobs.
 
 ## Run
 

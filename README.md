@@ -34,8 +34,9 @@ iPost customer ID, staging directory and file transfer settings, with a shared
 - Memcached configured for Koha. Suomi.fi access tokens are cached under the
   `cachekey` value from the configuration.
 - Perl modules: `Net::SFTP::Foreign`, `Net::FTP`, `PDF::API2`, `String::Random`,
-  `Text::Unaccent`, `YAML::XS`, `XML::Simple`, `File::Slurp`, `HTML::Template`,
-  `Archive::Zip` and `LWP::UserAgent`.
+  `Text::Unaccent`, `YAML::XS`, `XML::LibXML`, `File::Slurp`, `HTML::Template`,
+  `Archive::Zip` and `LWP::UserAgent`. `XML::LibXML` is required by Koha
+  itself, so it is normally already installed.
 - A staging directory that the `koha` user can write to, and a writable
   `/var/spool/koha` for the Suomi.fi password backup.
 
