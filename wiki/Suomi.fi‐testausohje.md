@@ -15,7 +15,7 @@
 ## Kehittäjät
 
 1. Lisää suomifi-asetukset koha-conf.xml tiedostoon tai liitännäisen
-   **Configure**-sivulle YAML-muodossa ja muuta tunnukset, contact ja cachekey
+   **Määritä**-sivulle YAML-muodossa ja muuta tunnukset, contact ja cachekey
    oikeiksi. Jos asetukset pidetään `koha-conf.xml`-tiedostossa, kääri sama YAML
    `<ksmessaging><![CDATA[ ... ]]></ksmessaging>`-osaan.
 
@@ -40,10 +40,10 @@ suomifi:
         password: pass              # salasana
 ```
 
-   Paina lopuksi **Set up Suomi.fi messaging** **Configure**-sivulla.
+   Paina lopuksi **Määritä Suomi.fi-viestintä** **Määritä**-sivulla.
 
 2. Varmista, että Suomi.fi-viestiasetukset on otettu käyttöön
-   **Configure**-sivulla (**Set up Suomi.fi messaging**).
+   **Määritä**-sivulla (**Määritä Suomi.fi-viestintä**).
 
    Viestitäppien näkyvyyttä voi säätää paikallisella SuomiFiMessaging-järjestelmäasetuksella.
 

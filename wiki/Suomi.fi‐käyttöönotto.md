@@ -16,7 +16,7 @@
 
 4. Asetukset REST-lähetykseen
 
-   Kopioi asetukset liitännäisen **Configure**-sivun kenttään YAML-muodossa
+   Kopioi asetukset liitännäisen **Määritä**-sivun kenttään YAML-muodossa
    (katso README, "Configuring"). Jos asetukset pidetään `koha-conf.xml`-tiedostossa,
    kääri sama YAML `<ksmessaging><![CDATA[ ... ]]></ksmessaging>`-osaan.
 
@@ -41,8 +41,8 @@ suomifi:
         password: pass              # salasana (bootstrap, tallennetaan plugin_dataan)
 ```
 
-5. Ota Suomi.fi-viestiasetukset käyttöön liitännäisen **Configure**-sivulla
-   painamalla **Set up Suomi.fi messaging**. Skriptiä ei tarvita.
+5. Ota Suomi.fi-viestiasetukset käyttöön liitännäisen **Määritä**-sivulla
+   painamalla **Määritä Suomi.fi-viestintä**. Skriptiä ei tarvita.
 
    - Painike lisää `suomifi`-viestinsiirtotyypin, jota ei ole vakioasennuksessa,
      ja kopioi jokaisen `circulation`- ja `reserves`-viestinsiirtotyypin
