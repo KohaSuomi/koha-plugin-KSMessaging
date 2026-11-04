@@ -241,7 +241,7 @@ At the `letters` level, next to `branches`:
 The REST password is not part of the stored YAML configuration and there is no
 password field on the configuration page. It is stored in `plugin_data` under
 `suomifi_rest_password_<BRANCHCODE>`, once per branch, and
-`change-suomifi-password.pl --write_config` writes it.
+`change-suomifi-password.pl --store` writes it.
 
 A `rest.password` written in the YAML on the configuration page is not stored
 there. Saving the configuration moves it into the `plugin_data` row for that
@@ -318,7 +318,7 @@ the ones you need into the configuration field, remove any you do not need, and
 press **Save configurations**; nothing reads them before that. A
 `rest.password` in the section comes along, and it is
 worth removing it from the YAML and storing it with
-`change-suomifi-password.pl --write_config` instead, since the
+`change-suomifi-password.pl --store` instead, since the
 configuration page shows the YAML in the clear. The two Suomi.fi settings have no
 `koha-conf.xml` counterpart and are left untouched.
 
@@ -393,7 +393,7 @@ Rotates the Suomi.fi REST password of one branch and stores the new password in
 | --- | --- |
 | `--branchcode=BRANCHCODE` | Branch whose REST account and stored password are used. Defaults to `default`. |
 | `--old_password=OLD_PASSWORD` | Use this password instead of the stored one. |
-| `--write_config` | Store the new password in `plugin_data` under `suomifi_rest_password_<BRANCHCODE>`. Without it the password is changed in Suomi.fi but not stored, and the plugin keeps using the old one. |
+| `--store` | Store the new password in `plugin_data` under `suomifi_rest_password_<BRANCHCODE>`. Without it the password is changed in Suomi.fi but not stored, and the plugin keeps using the old one. |
 | `--backup=BACKUP` | File to write the new password to before the change. Defaults to `/var/spool/koha/suomifi_password_backup.txt`, or `/var/spool/koha/suomifi_password_backup_<BRANCHCODE>.txt` for any other branch. |
 | `--test_password` | Only check that the current password is accepted, then exit without changing anything. |
 | `--verbose`, `-v` | Print timestamps and progress. |
@@ -402,7 +402,7 @@ The new password is always written to the backup file before the change is
 attempted, unless `--test_password` is given, so the password can be recovered if
 the change fails.
 
-Run the script once per branch with `--write_config` after the initial
+Run the script once per branch with `--store` after the initial
 configuration, so that the password in `plugin_data` is in use.
 
 ### suomifi-status.pl

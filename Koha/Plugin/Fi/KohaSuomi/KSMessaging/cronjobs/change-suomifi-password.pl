@@ -18,7 +18,7 @@ my $help;
 my $verbose = 0;
 my $branchcode = 'default';
 my $old_password;
-my $write_config = 0;
+my $store = 0;
 my $backup;
 my $test_password = 0;
 
@@ -27,7 +27,7 @@ GetOptions(
     'verbose|v' => \$verbose,
     'branchcode=s' => \$branchcode,
     'old_password=s' => \$old_password,
-    'write_config' => \$write_config,
+    'store|write_config' => \$store,
     'backup=s' => \$backup,
     'test_password' => \$test_password
 );
@@ -40,10 +40,10 @@ my $default_backup = $branchcode eq 'default'
     : "/var/spool/koha/suomifi_password_backup_$branchcode.txt";
 
 if ($help) {
-    print "Usage: $0 [--branchcode=BRANCHCODE] [--old_password=OLD_PASSWORD] [--write_config] [--backup=BACKUP] [--test_password]\n";
+    print "Usage: $0 [--branchcode=BRANCHCODE] [--old_password=OLD_PASSWORD] [--store] [--backup=BACKUP] [--test_password]\n";
     print "--branchcode: Branch whose REST account and stored password are used (default: 'default')\n";
     print "--old_password: Provide the old password if you want to test it before changing\n";
-    print "--write_config: If set, the new password will be written to the config file\n";
+    print "--store: If set, the new password will be written to the config file\n";
     print "--backup: Specify a file to back up the new password (default: $default_backup)\n";
     print "--test_password: If set, the script will only test the old password without changing it\n";
     exit 0;
@@ -93,11 +93,11 @@ try {
     sleep 2; #Ensure token is valid
     my $response = $restClass->changePassword('/v1/change-password', 'application/json', {accessToken => $accessToken, currentPassword => $password, newPassword => $new_password});
     print "Password changed to $new_password\n" if $verbose;
-    if ($write_config) {
+    if ($store) {
         $config->store_password($new_password);
         print "Password stored in plugin_data (suomifi_rest_password_$branchcode).\n";
     } else {
-        print "Not storing in plugin_data, use --write_config to enable this.\n";
+        print "Not storing in plugin_data, use --store to enable this.\n";
         print "A password that is still in the configuration YAML is moved into plugin_data the next time the configuration is saved on the plugin configuration page.\n";
     }
     $cache->clear_from_cache($config->cacheKey());

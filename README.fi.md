@@ -239,7 +239,7 @@ Kaikissa toimipisteosioissa yhteiset asetukset:
 REST-salasana ei kuulu tallennettavaan YAML-asetukseen eikä määrityssivulla ole
 salasanakenttää. Se tallennetaan `plugin_data`-tauluun avaimella
 `suomifi_rest_password_<HAARUUDENKOODI>` kerran haaruutta kohden, ja sen kirjoittaa
-`change-suomifi-password.pl --write_config`.
+`change-suomifi-password.pl --store`.
 
 Määrityssivun YAML-risteykseen kirjoitettua `rest.password`-arvoa ei tallenneta
 YAML-muotoon. Asetusten tallennus siirtää sen kyseisen haaruuden
@@ -317,7 +317,7 @@ sen arvoja ei käytetä. Kopioi tarvitsemasi arvot asetuskenttään **Täytä
 koha-conf.xml-tiedostosta** -painikkeella, poista tarpeettomat ja paina
 **Tallenna asetukset**; ennen sitä mitään ei lueta.
 Osiossa oleva `rest.password` tulee mukaan, ja kannattaa poistaa se
-YAML-muodosta ja tallentaa se `change-suomifi-password.pl --write_config`
+YAML-muodosta ja tallentaa se `change-suomifi-password.pl --store`
 -komennolla, koska määrityssivu näyttää YAML-muodon selvässä tekstissä. Kahdella
 Suomi.fi-asetuksella ei ole koha-conf.xml-vastaavaa, joten kopiointi ei koske
 niitä.
@@ -396,7 +396,7 @@ Vaihtaa yhden toimipisteen Suomi.fi REST -salasanan ja tallentaa uuden salasanan
 | --- | --- |
 | `--branchcode=BRANCHCODE` | Toimipiste, jonka REST-tiliä ja tallennettua salasanaa käytetään. Oletuksena `default`. |
 | `--old_password=OLD_PASSWORD` | Käytä tätä salasanaa tallennetun sijaan. |
-| `--write_config` | Tallenna uusi salasana `plugin_data`-tauluun avaimella `suomifi_rest_password_<HAARUUDENKOODI>`. Ilman valintaa salasana vaihdetaan Suomi.fissä, mutta sitä ei tallenneta, ja lisäosa käyttää edelleen vanhaa salasanaa. |
+| `--store` | Tallenna uusi salasana `plugin_data`-tauluun avaimella `suomifi_rest_password_<HAARUUDENKOODI>`. Ilman valintaa salasana vaihdetaan Suomi.fissä, mutta sitä ei tallenneta, ja lisäosa käyttää edelleen vanhaa salasanaa. |
 | `--backup=BACKUP` | Tiedosto, johon uusi salasana kirjoitetaan ennen vaihtoa. Oletuksena `/var/spool/koha/suomifi_password_backup.txt`, muille toimipisteille `/var/spool/koha/suomifi_password_backup_<HAARUUDENKOODI>.txt`. |
 | `--test_password` | Tarkistaa vain, että nykyinen salasana hyväksytään, ja poistuu vaihtamatta mitään. |
 | `--verbose`, `-v` | Tulostaa ajeleet ja edistymisen. |
@@ -405,7 +405,7 @@ Uusi salasana kirjoitetaan aina varmuuskopiotiedostoon ennen vaihtoa, paitsi jos
 käytetään `--test_password`-valintaa, jotta salasana voidaan palauttaa, jos vaihdot
 epäonnistuu.
 
-Suorita skripti kerran toimipistettä kohta lipulla `--write_config` alkukonfiguraation
+Suorita skripti kerran toimipistettä kohta lipulla `--store` alkukonfiguraation
 jälkeen, jotta `plugin_data`-tauluun tallennettu salasana otetaan käyttöön.
 
 ### suomifi-status.pl
