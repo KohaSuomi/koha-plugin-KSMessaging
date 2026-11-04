@@ -430,12 +430,12 @@ TU: TU23456</code></pre>
                                     </thead>
                                     <tbody>
                                         [% FOREACH letter IN suomifi_letters %]
-                                        <tr class="[% letter.has_letter ? 'table-success' : 'table-danger' %]">
+                                        <tr>
                                             <td>[% letter.name | html %]</td>
                                             <td>[% letter.letter_module | html %]</td>
                                             <td>[% letter.letter_code | html %]</td>
                                             <td>[% letter.branchcode ? letter.branchcode : 'default' | html %]</td>
-                                            <td class="[% letter.has_letter ? 'text-success' : 'text-danger' %]">[% letter.has_letter ? T.config_61 : T.config_62 %]</td>
+                                            <td>[% letter.has_letter ? '✓' : '✗' %] [% letter.has_letter ? T.config_61 : T.config_62 %]</td>
                                             <td><a class="btn btn-default btn-sm" href="[% letter.edit_url | url %]">[% T.config_63 %]</a></td>
                                         </tr>
                                         [% END %]
