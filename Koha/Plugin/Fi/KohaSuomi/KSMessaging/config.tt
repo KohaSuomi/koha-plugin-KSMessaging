@@ -430,7 +430,7 @@ TU: TU23456</code></pre>
                                     </thead>
                                     <tbody>
                                         [% FOREACH letter IN suomifi_letters %]
-                                        <tr>
+                                        <tr class="[% letter.has_letter ? 'table-success' : 'table-danger' %]">
                                             <td>[% letter.name | html %]</td>
                                             <td>[% letter.letter_module | html %]</td>
                                             <td>[% letter.letter_code | html %]</td>
