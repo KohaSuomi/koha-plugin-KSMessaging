@@ -354,6 +354,14 @@ sub run_configure {
         sub { return $args{koha_conf_section} ? 1 : 0 }
     );
     $config_mock->mock(
+        'config_from_koha_conf',
+        sub { return $args{from_conf} }
+    );
+    $config_mock->mock(
+        'last_copy_error',
+        sub { return $args{copy_error} }
+    );
+    $config_mock->mock(
         'setSuomiFiMessaging',
         sub {
             my ( $config, $enabled ) = @_;
@@ -471,7 +479,7 @@ subtest 'configure: the save button only saves the configuration' => sub {
 };
 
 subtest 'configure: an invalid token changes nothing' => sub {
-    for my $action (qw(setup_messages toggle_suomifi_messaging save)) {
+    for my $action (qw(setup_messages toggle_suomifi_messaging save config_from_koha_conf)) {
         my $result = run_configure(
             method     => 'POST',
             params     => { $action => 1 },
@@ -530,6 +538,39 @@ subtest 'configure: the page says that koha-conf.xml is not read' => sub {
     is( $with->{template}->{koha_conf_section}, 1,
         'a section in koha-conf.xml is reported, so the page can warn about it' );
     is_deeply( $with->{calls}, [], 'reporting it changes nothing' );
+};
+
+subtest 'configure: the fill button fills the textarea from koha-conf.xml' => sub {
+    my $result = run_configure(
+        method    => 'POST',
+        params    => { config_from_koha_conf => 1 },
+        from_conf => "filled: 1\n",
+    );
+
+    is_deeply( $result->{calls}, [], 'filling changes nothing by itself' );
+    is( $result->{template}->{config}, "filled: 1\n",
+        'the rendered YAML lands in the textarea' );
+    is_deeply(
+        [ map { $_->{key} } @{ $result->{template}->{messages} } ],
+        ['config_47'],
+        'the fill is reported as a success'
+    );
+    ok( !$result->{template}->{saved}, 'nothing was saved by filling' );
+};
+
+subtest 'configure: the fill button reports when there is nothing to copy' => sub {
+    my $result = run_configure(
+        method     => 'POST',
+        params     => { config_from_koha_conf => 1 },
+        copy_error => 'empty',
+    );
+
+    is_deeply( $result->{calls}, [], 'nothing changes' );
+    is_deeply(
+        [ map { $_->{key} } @{ $result->{template}->{messages} } ],
+        ['config_48'],
+        'a missing section is reported'
+    );
 };
 
 done_testing();

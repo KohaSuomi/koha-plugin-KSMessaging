@@ -313,8 +313,9 @@ configuration page is where the settings live from then on, since it validates
 the YAML and keeps all three settings in one place.
 
 The configuration page warns when the section is still in `koha-conf.xml`,
-because those values are then ignored. Copy them into the configuration field
-and press **Save configurations**; nothing reads them before that. A
+because those values are then ignored. Use **Fill from koha-conf.xml** to copy
+the ones you need into the configuration field, remove any you do not need, and
+press **Save configurations**; nothing reads them before that. A
 `rest.password` in the section comes along, and it is
 worth removing it from the YAML and storing it with
 `change-suomifi-password.pl --write_config` instead, since the

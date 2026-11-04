@@ -313,8 +313,9 @@ asetukset ovat määrityssivulla, koska se tarkistaa YAML-syntaksin ja pitää
 kaikki kolme asetusta yhdessä paikassa.
 
 Määrityssivu varoittaa, kun osio on edelleen koha-conf.xml-tiedostossa, jolloin
-sen arvoja ei käytetä. Kopioi arvot asetuskenttään ja paina **Tallenna asetukset**;
-ennen sitä mitään ei lueta.
+sen arvoja ei käytetä. Kopioi tarvitsemasi arvot asetuskenttään **Täytä
+koha-conf.xml-tiedostosta** -painikkeella, poista tarpeettomat ja paina
+**Tallenna asetukset**; ennen sitä mitään ei lueta.
 Osiossa oleva `rest.password` tulee mukaan, ja kannattaa poistaa se
 YAML-muodosta ja tallentaa se `change-suomifi-password.pl --write_config`
 -komennolla, koska määrityssivu näyttää YAML-muodon selvässä tekstissä. Kahdella
