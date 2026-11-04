@@ -156,37 +156,34 @@ sub suomifi_letters {
     my ($self) = @_;
 
     my $dbh = C4::Context->dbh;
+    my $modules = join( ', ', map { $dbh->quote($_) } @LETTER_MODULES );
+
     my $sth = eval {
         $dbh->prepare(
-            "SELECT mt.message_attribute_id, ma.message_name, mt.is_digest, "
-              . "mt.letter_module, mt.letter_code, mt.branchcode "
-              . "FROM message_transports mt "
-              . "JOIN message_attributes ma "
-              . "  ON ma.message_attribute_id = mt.message_attribute_id "
-              . "WHERE mt.message_transport_type = ? "
-              . "ORDER BY ma.message_name, mt.letter_module, mt.letter_code, "
-              . "mt.branchcode"
+            "SELECT DISTINCT module, code, branchcode, name "
+              . "FROM letter "
+              . "WHERE module IN ($modules) "
+              . "ORDER BY module, code, branchcode"
         );
     };
     return [] if $@ || !$sth;
 
-    my $rows = eval { $sth->execute($TRANSPORT_TYPE) };
+    my $rows = eval { $sth->execute };
     if ($@) {
-        warn "KSMessaging: failed to read the suomifi message transports: $@";
+        warn "KSMessaging: failed to read the letter templates: $@";
         $sth->finish;
         return [];
     }
 
-    my $transports = $rows ? $sth->fetchall_arrayref : [];
+    my $letters_list = $rows ? $sth->fetchall_arrayref : [];
     $sth->finish;
 
     my @letters;
-    for my $row (@$transports) {
-        my ( $message_attribute_id, $message_name, $is_digest, $letter_module,
-             $letter_code, $branchcode )
-          = @$row;
+    for my $row (@$letters_list) {
+        my ( $letter_module, $letter_code, $branchcode, $name ) = @$row;
 
         $branchcode = '' unless defined $branchcode;
+        $name       = '' unless defined $name;
 
         my $has_letter = 0;
         my $lsth       = eval {
@@ -215,14 +212,12 @@ sub suomifi_letters {
 
         push @letters,
           {
-            message_attribute_id => $message_attribute_id,
-            message_name         => $message_name,
-            is_digest            => $is_digest,
-            letter_module        => $letter_module,
-            letter_code          => $letter_code,
-            branchcode           => $branchcode,
-            has_letter           => $has_letter ? 1 : 0,
-            edit_url             => $edit_url,
+            name            => $name ne '' ? $name : $letter_code,
+            letter_module   => $letter_module,
+            letter_code     => $letter_code,
+            branchcode      => $branchcode,
+            has_letter      => $has_letter ? 1 : 0,
+            edit_url        => $edit_url,
           };
     }
 

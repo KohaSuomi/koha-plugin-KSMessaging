@@ -431,7 +431,7 @@ TU: TU23456</code></pre>
                                     <tbody>
                                         [% FOREACH letter IN suomifi_letters %]
                                         <tr>
-                                            <td>[% letter.message_name | html %]</td>
+                                            <td>[% letter.name | html %]</td>
                                             <td>[% letter.letter_module | html %]</td>
                                             <td>[% letter.letter_code | html %]</td>
                                             <td>[% letter.branchcode ? letter.branchcode : 'default' | html %]</td>
