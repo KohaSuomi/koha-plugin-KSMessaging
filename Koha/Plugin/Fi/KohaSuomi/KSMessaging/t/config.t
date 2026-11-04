@@ -358,7 +358,7 @@ subtest 'configure page warns about a koha-conf.xml section that is still there'
     # nothing being wrong, when what is wrong is that the settings are ignored.
     my $tt = read_file("$Bin/../config.tt");
 
-    my ($warn_block) = $tt =~ /(\[% IF koha_conf_section %\].*?\[% END %\])/s;
+    my ($warn_block) = $tt =~ /(\[% IF koha_conf_section && !has_stored_config %\].*?\[% END %\])/s;
     ok( $warn_block, 'config.tt has the notice about a section that is still there' );
     like( $warn_block, qr/T\.config_53/,   'the notice uses config_53' );
     like( $warn_block, qr/alert-warning/, 'the notice is a warning' );
@@ -369,7 +369,7 @@ subtest 'configure page warns about a koha-conf.xml section that is still there'
 
         my $out = '';
         my $tpl = Template->new;
-        $tpl->process( \$snippet, { koha_conf_section => 1 }, \$out ) or die $tpl->error;
+        $tpl->process( \$snippet, { koha_conf_section => 1, has_stored_config => 0 }, \$out ) or die $tpl->error;
 
         my ($warn) = $out =~ m{<div class="alert alert-warning[^"]*">(.*?)</div>}s;
         ok( length( $warn // '' ), "$lang renders text for config_53" );
@@ -378,7 +378,7 @@ subtest 'configure page warns about a koha-conf.xml section that is still there'
         # A site with no section in koha-conf.xml has nothing to migrate, so
         # there is nothing to warn about
         my $out_without = '';
-        $tpl->process( \$snippet, { koha_conf_section => 0 }, \$out_without ) or die $tpl->error;
+        $tpl->process( \$snippet, { koha_conf_section => 0, has_stored_config => 0 }, \$out_without ) or die $tpl->error;
         unlike( $out_without, qr/alert-warning/, "$lang is not warned about a section that is not there" );
     }
 };

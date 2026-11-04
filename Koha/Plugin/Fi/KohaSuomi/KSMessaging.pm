@@ -197,6 +197,14 @@ sub configure {
         }
     }
 
+    # The fill button and the warning about a leftover koha-conf.xml section
+    # are only useful before anything has been stored.  Once plugin_data holds
+    # a configuration, both are hidden so the page does not offer to overwrite
+    # it.
+    my $has_stored_config = $saved
+        ? 1
+        : ( ( $config->loadedConfigForDisplay // '' ) =~ /\S/ ? 1 : 0 );
+
     return $self->_output_configure_page(
         config  => $config_for_display,
         suomifi_alt_sender => $suomifi_alt_sender_for_display,
@@ -207,6 +215,7 @@ sub configure {
         setup_result => $setup_result,
         moved_passwords => $config->moved_passwords,
         koha_conf_section => $config->koha_conf_section_present,
+        has_stored_config => $has_stored_config,
     );
 }
 
@@ -269,6 +278,7 @@ sub _output_configure_page {
         setup_result => $params{setup_result},
         moved_passwords => $params{moved_passwords},
         koha_conf_section => $params{koha_conf_section},
+        has_stored_config => $params{has_stored_config},
     );
 
     return $self->output_html( $template->output() );
