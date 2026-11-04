@@ -206,8 +206,14 @@ sub suomifi_letters {
     my $letters_list = $rows ? $sth->fetchall_arrayref : [];
     $sth->finish;
 
-    # Collect candidate keys: message transports, custom codes, and any letter
-    # template whose code is one of the custom codes.
+    # Collect candidate keys: every branch variant of a letter that can be
+    # defined on users' message preferences, plus the custom overdue notices.
+    my %transport_codes;
+    for my $key ( keys %transport_keys ) {
+        my ( $module, $code, $branchcode ) = split /\|/, $key, 3;
+        $transport_codes{"$module|$code"} = 1;
+    }
+
     my %candidates;
     for my $key ( keys %transport_keys ) {
         $candidates{$key} = 1;
@@ -215,7 +221,9 @@ sub suomifi_letters {
     for my $row (@$letters_list) {
         my ( $module, $code, $branchcode, $name ) = @$row;
         $branchcode = '' unless defined $branchcode;
-        if ( $module eq 'circulation' && grep { $_ eq $code } @custom_codes ) {
+        if ( exists $transport_codes{"$module|$code"}
+            || ( $module eq 'circulation' && grep { $_ eq $code } @custom_codes ) )
+        {
             $candidates{"$module|$code|$branchcode"} = 1;
         }
     }
