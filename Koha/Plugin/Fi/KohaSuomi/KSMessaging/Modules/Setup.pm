@@ -158,6 +158,34 @@ sub suomifi_letters {
     my $dbh = C4::Context->dbh;
     my $modules = join( ', ', map { $dbh->quote($_) } @LETTER_MODULES );
 
+    # Letters that can be defined on users' message preferences are the ones
+    # that appear in message_transports.  Custom notices such as ODUE1 and
+    # ODUE2 are not part of Koha's message transports, so they are added here
+    # explicitly so they can be filled in and tracked as well.
+    my @custom_codes = qw(ODUE1 ODUE2);
+
+    my %transport_keys;
+    my $tsth = eval {
+        $dbh->prepare(
+            "SELECT DISTINCT letter_module, letter_code, branchcode "
+              . "FROM message_transports "
+              . "WHERE letter_module IN ($modules)"
+        );
+    };
+    if ($tsth) {
+        my $trows = eval { $tsth->execute };
+        if ( !$@ && $trows ) {
+            for my $row ( @{ $tsth->fetchall_arrayref } ) {
+                my ( $module, $code, $branchcode ) = @$row;
+                $branchcode = '' unless defined $branchcode;
+                $transport_keys{"$module|$code|$branchcode"} = 1;
+            }
+        }
+        $tsth->finish;
+    }
+
+    # Read every letter template in the managed modules so that custom
+    # notices that are not (yet) in message_transports are still listed.
     my $sth = eval {
         $dbh->prepare(
             "SELECT DISTINCT module, code, branchcode, name "
@@ -178,12 +206,43 @@ sub suomifi_letters {
     my $letters_list = $rows ? $sth->fetchall_arrayref : [];
     $sth->finish;
 
-    my @letters;
+    # Collect candidate keys: message transports, custom codes, and any letter
+    # template whose code is one of the custom codes.
+    my %candidates;
+    for my $key ( keys %transport_keys ) {
+        $candidates{$key} = 1;
+    }
     for my $row (@$letters_list) {
-        my ( $letter_module, $letter_code, $branchcode, $name ) = @$row;
+        my ( $module, $code, $branchcode, $name ) = @$row;
+        $branchcode = '' unless defined $branchcode;
+        if ( $module eq 'circulation' && grep { $_ eq $code } @custom_codes ) {
+            $candidates{"$module|$code|$branchcode"} = 1;
+        }
+    }
+    # Make sure the two custom codes are listed even when no template exists
+    # yet, so they can be filled in.  Overdue notices belong to circulation.
+    for my $code (@custom_codes) {
+        $candidates{"circulation|$code|"} = 1;
+    }
 
+    # Index letter rows by key for name lookup.
+    my %names;
+    for my $row (@$letters_list) {
+        my ( $module, $code, $branchcode, $name ) = @$row;
         $branchcode = '' unless defined $branchcode;
         $name       = '' unless defined $name;
+        my $key = "$module|$code|$branchcode";
+        $names{$key} = $name if !exists $names{$key} || $names{$key} eq '';
+    }
+
+    my @letters;
+    for my $key ( sort keys %candidates ) {
+        my ( $letter_module, $letter_code, $branchcode ) = split /\|/, $key, 3;
+        $branchcode = '' unless defined $branchcode;
+
+        my $name = exists $names{$key} && $names{$key} ne ''
+          ? $names{$key}
+          : $letter_code;
 
         my $has_letter = 0;
         my $lsth       = eval {
@@ -212,7 +271,7 @@ sub suomifi_letters {
 
         push @letters,
           {
-            name            => $name ne '' ? $name : $letter_code,
+            name            => $name,
             letter_module   => $letter_module,
             letter_code     => $letter_code,
             branchcode      => $branchcode,
