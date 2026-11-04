@@ -14,10 +14,8 @@
 
 ## Kehittäjät
 
-1. Lisää suomifi-asetukset koha-conf.xml tiedostoon tai liitännäisen
-   **Määritä**-sivulle YAML-muodossa ja muuta tunnukset, contact ja cachekey
-   oikeiksi. Jos asetukset pidetään `koha-conf.xml`-tiedostossa, kääri sama YAML
-   `<ksmessaging><![CDATA[ ... ]]></ksmessaging>`-osaan.
+1. Lisää suomifi-asetukset liitännäisen **Määritä**-sivulle YAML-muodossa ja
+   muuta tunnukset, contact ja cachekey oikeiksi.
 
 ```
 suomifi:

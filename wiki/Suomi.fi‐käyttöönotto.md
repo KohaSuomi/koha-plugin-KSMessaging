@@ -17,8 +17,7 @@
 4. Asetukset REST-lähetykseen
 
    Kopioi asetukset liitännäisen **Määritä**-sivun kenttään YAML-muodossa
-   (katso README, "Configuring"). Jos asetukset pidetään `koha-conf.xml`-tiedostossa,
-   kääri sama YAML `<ksmessaging><![CDATA[ ... ]]></ksmessaging>`-osaan.
+   (katso README, "Configuring").
 
 ```
 suomifi:
