@@ -160,10 +160,16 @@ sub suomifi_letters {
 
     my $sth = eval {
         $dbh->prepare(
-            "SELECT DISTINCT module, code, branchcode, name "
-              . "FROM letter "
-              . "WHERE module IN ($modules) "
-              . "ORDER BY module, code, branchcode"
+            "SELECT mt.letter_module, mt.letter_code, mt.branchcode, "
+              . "MIN(l.name) AS name "
+              . "FROM message_transports mt "
+              . "LEFT JOIN letter l "
+              . "  ON l.module = mt.letter_module "
+              . " AND l.code = mt.letter_code "
+              . " AND l.branchcode = mt.branchcode "
+              . "WHERE mt.letter_module IN ($modules) "
+              . "GROUP BY mt.letter_module, mt.letter_code, mt.branchcode "
+              . "ORDER BY mt.letter_module, mt.letter_code, mt.branchcode"
         );
     };
     return [] if $@ || !$sth;
