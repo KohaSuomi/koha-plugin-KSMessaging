@@ -14,7 +14,7 @@
 
 ## Kehittäjät
 
-1. Lisää suomifi-asetukset liitännäisen **Määritä**-sivulle YAML-muodossa ja
+1. Lisää suomifi-asetukset liitännäisen **Asetukset**-sivulle YAML-muodossa ja
    muuta tunnukset, contact ja cachekey oikeiksi.
 
 ```
@@ -38,10 +38,10 @@ suomifi:
         password: pass              # salasana
 ```
 
-   Paina lopuksi **Määritä Suomi.fi-viestintä** **Määritä**-sivulla.
+   Paina lopuksi **Määritä Suomi.fi-viestintä** **Asetukset**-sivulla.
 
 2. Varmista, että Suomi.fi-viestiasetukset on otettu käyttöön
-   **Määritä**-sivulla (**Määritä Suomi.fi-viestintä**).
+   **Asetukset**-sivulla (**Määritä Suomi.fi-viestintä**).
 
    Viestitäppien näkyvyyttä voi säätää paikallisella SuomiFiMessaging-järjestelmäasetuksella.
 

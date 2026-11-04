@@ -16,7 +16,7 @@
 
 4. Asetukset REST-lähetykseen
 
-   Kopioi asetukset liitännäisen **Määritä**-sivun kenttään YAML-muodossa
+   Kopioi asetukset liitännäisen **Asetukset**-sivun kenttään YAML-muodossa
    (katso README, "Configuring").
 
 ```
@@ -40,7 +40,7 @@ suomifi:
         password: pass              # salasana (bootstrap, tallennetaan plugin_dataan)
 ```
 
-5. Ota Suomi.fi-viestiasetukset käyttöön liitännäisen **Määritä**-sivulla
+5. Ota Suomi.fi-viestiasetukset käyttöön liitännäisen **Asetukset**-sivulla
    painamalla **Määritä Suomi.fi-viestintä**. Skriptiä ei tarvita.
 
    - Painike lisää `suomifi`-viestinsiirtotyypin, jota ei ole vakioasennuksessa,
