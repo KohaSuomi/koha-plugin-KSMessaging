@@ -16,35 +16,29 @@
 
 4. Asetukset REST-lähetykseen
 
-   Kopioi asetukset `koha-conf.xml`-tiedoston `<ksmessaging>`-osaan, tai suoraan
-   liitännäisen **Configure**-sivun kenttään (katso README, "Configuring"):
+   Kopioi asetukset liitännäisen **Configure**-sivun kenttään YAML-muodossa
+   (katso README, "Configuring"). Jos asetukset pidetään `koha-conf.xml`-tiedostossa,
+   kääri sama YAML `<ksmessaging><![CDATA[ ... ]]></ksmessaging>`-osaan.
 
 ```
-<ksmessaging>
-  <suomifi>
-    <branches>
-      <default>
-         <ipostpdf>
-          <customerid>123456</customerid> <!-- six digit customerid required by suomifi for print letters, although not actually used atm -->
-          <customerpass>1234</customerpass>
-          <ovtid>000000000000</ovtid> <!-- 12 digit OVT-id for organization -->
-          <printprovider>posti</printprovider> <!-- suomi.fi supports Edita and OpusCapita, but because of legal stuff not in use atm, noSendOC will prevent the letters from being delivered on paper -->
-          <senderid>koha_sftp</senderid>
-          <fileprefix>koha</fileprefix> <!-- senderid is used if this is not set -->
-         </ipostpdf>
-         <stagingdir>/var/spool/koha/pate-staging/</stagingdir>
-         <contact>foobaa@kohala.fi</contact> <!-- e-mail address to contact in case of errors -->
-         <cachekey>token-name</cachekey>
-         <rest>
-          <baseUrl>https://api.messages.suomi.fi</baseUrl>
-          <serviceid>foo_baa</serviceid> <!-- palvelutunnus -->
-          <username>koha_foo</username> <!-- käyttäjätunnus -->
-          <password>pass</password> <!-- salasana -->
-         </rest>
-       </default>
-    </branches>
-  </suomifi>
-</ksmessaging>
+suomifi:
+  branches:
+    default:
+      ipostpdf:
+        customerid: 123456          # six digit customerid required by suomifi for print letters, although not actually used atm
+        customerpass: "1234"
+        ovtid: "000000000000"      # 12 digit OVT-id for organization
+        printprovider: posti        # suomi.fi supports Edita and OpusCapita, but because of legal stuff not in use atm
+        senderid: koha_sftp
+        fileprefix: koha            # senderid is used if this is not set
+      stagingdir: /var/spool/koha/pate-staging/
+      contact: foobaa@kohala.fi    # e-mail address to contact in case of errors
+      cachekey: token-name
+      rest:
+        baseUrl: https://api.messages.suomi.fi
+        serviceid: foo_baa          # palvelutunnus
+        username: koha_foo          # käyttäjätunnus
+        password: pass              # salasana (bootstrap, tallennetaan plugin_dataan)
 ```
 
 5. Ota Suomi.fi-viestiasetukset käyttöön liitännäisen **Configure**-sivulla

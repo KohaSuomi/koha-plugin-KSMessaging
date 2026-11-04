@@ -14,38 +14,33 @@
 
 ## Kehittäjät
 
-1. Lisää suomifi-asetukset koha-conf.xml tiedostoon ja muuta tunnukset, contact ja cachekey oikeiksi.
+1. Lisää suomifi-asetukset koha-conf.xml tiedostoon tai liitännäisen
+   **Configure**-sivulle YAML-muodossa ja muuta tunnukset, contact ja cachekey
+   oikeiksi. Jos asetukset pidetään `koha-conf.xml`-tiedostossa, kääri sama YAML
+   `<ksmessaging><![CDATA[ ... ]]></ksmessaging>`-osaan.
 
 ```
-<ksmessaging>
-  <suomifi>
-    <branches>
-      <default>
-         <ipostpdf>
-          <customerid>123456</customerid> <!-- six digit customerid required by suomifi for print letters, although not actually used atm -->
-          <customerpass>1234</customerpass>
-          <ovtid>000000000000</ovtid> <!-- 12 digit OVT-id for organization -->
-          <printprovider>posti</printprovider> <!-- suomi.fi supports Edita and OpusCapita, but because of legal stuff not in use atm, noSendOC will prevent the letters from being delivered on paper -->
-          <senderid>koha_sftp</senderid>
-          <fileprefix>koha</fileprefix> <!-- senderid is used if this is not set -->
-         </ipostpdf>
-         <stagingdir>/var/spool/koha/pate-staging/</stagingdir>
-         <contact>foobaa@kohala.fi</contact> <!-- e-mail address to contact in case of errors -->
-         <cachekey>token-name</cachekey>
-         <rest>
-          <baseUrl>https://api.messages-qa.suomi.fi</baseUrl> <!-- Tämä on testausosoite, tuotannolle on oma -->
-          <serviceid>foo_baa</serviceid> <!-- palvelutunnus -->
-          <username>koha_foo</username> <!-- käyttäjätunnus -->
-          <password>pass</password> <!-- salasana -->
-         </rest>
-       </default>
-    </branches>
-  </suomifi>
-</ksmessaging>
+suomifi:
+  branches:
+    default:
+      ipostpdf:
+        customerid: 123456          # six digit customerid required by suomifi for print letters, although not actually used atm
+        customerpass: "1234"
+        ovtid: "000000000000"      # 12 digit OVT-id for organization
+        printprovider: posti        # suomi.fi supports Edita and OpusCapita, but because of legal stuff not in use atm
+        senderid: koha_sftp
+        fileprefix: koha            # senderid is used if this is not set
+      stagingdir: /var/spool/koha/pate-staging/
+      contact: foobaa@kohala.fi    # e-mail address to contact in case of errors
+      cachekey: token-name
+      rest:
+        baseUrl: https://api.messages-qa.suomi.fi   # Tämä on testausosoite, tuotannolle on oma
+        serviceid: foo_baa          # palvelutunnus
+        username: koha_foo          # käyttäjätunnus
+        password: pass              # salasana
 ```
 
-   Tai kopioi asetukset liitännäisen **Configure**-sivulle ja paina
-   **Set up Suomi.fi messaging**.
+   Paina lopuksi **Set up Suomi.fi messaging** **Configure**-sivulla.
 
 2. Varmista, että Suomi.fi-viestiasetukset on otettu käyttöön
    **Configure**-sivulla (**Set up Suomi.fi messaging**).
