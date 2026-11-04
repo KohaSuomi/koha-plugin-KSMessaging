@@ -147,6 +147,88 @@ sub transport_count {
     return $count || 0;
 }
 
+## Returns the message transports that are set up for the 'suomifi' transport
+## type, as an arrayref of hashrefs.  Each entry carries the notice name, the
+## letter module and code, the branch code and whether a letter template with
+## the 'suomifi' transport type exists for it, so the configuration page can
+## link to the Koha notice editor.
+sub suomifi_letters {
+    my ($self) = @_;
+
+    my $dbh = C4::Context->dbh;
+    my $sth = eval {
+        $dbh->prepare(
+            "SELECT mt.message_attribute_id, ma.message_name, mt.is_digest, "
+              . "mt.letter_module, mt.letter_code, mt.branchcode "
+              . "FROM message_transports mt "
+              . "JOIN message_attributes ma "
+              . "  ON ma.message_attribute_id = mt.message_attribute_id "
+              . "WHERE mt.message_transport_type = ? "
+              . "ORDER BY ma.message_name, mt.letter_module, mt.letter_code, "
+              . "mt.branchcode"
+        );
+    };
+    return [] if $@ || !$sth;
+
+    my $rows = eval { $sth->execute($TRANSPORT_TYPE) };
+    if ($@) {
+        warn "KSMessaging: failed to read the suomifi message transports: $@";
+        $sth->finish;
+        return [];
+    }
+
+    my $transports = $rows ? $sth->fetchall_arrayref : [];
+    $sth->finish;
+
+    my @letters;
+    for my $row (@$transports) {
+        my ( $message_attribute_id, $message_name, $is_digest, $letter_module,
+             $letter_code, $branchcode )
+          = @$row;
+
+        $branchcode = '' unless defined $branchcode;
+
+        my $has_letter = 0;
+        my $lsth       = eval {
+            $dbh->prepare(
+                "SELECT COUNT(*) FROM letter "
+                  . "WHERE module = ? AND code = ? AND branchcode = ? "
+                  . "AND message_transport_type = ?"
+            );
+        };
+        if ($lsth) {
+            my $lrows = eval {
+                $lsth->execute( $letter_module, $letter_code, $branchcode,
+                    $TRANSPORT_TYPE );
+            };
+            if ( !$@ && $lrows ) {
+                ($has_letter) = $lsth->fetchrow_array;
+            }
+            $lsth->finish;
+        }
+
+        my $edit_url =
+            "/cgi-bin/koha/tools/letter.pl?op=add_form"
+          . "&module=$letter_module"
+          . "&code=$letter_code";
+        $edit_url .= "&branchcode=$branchcode" if $branchcode ne '';
+
+        push @letters,
+          {
+            message_attribute_id => $message_attribute_id,
+            message_name         => $message_name,
+            is_digest            => $is_digest,
+            letter_module        => $letter_module,
+            letter_code          => $letter_code,
+            branchcode           => $branchcode,
+            has_letter           => $has_letter ? 1 : 0,
+            edit_url             => $edit_url,
+          };
+    }
+
+    return \@letters;
+}
+
 ############################################################
 ## Internal helpers
 ############################################################

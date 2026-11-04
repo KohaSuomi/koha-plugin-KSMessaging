@@ -50,5 +50,16 @@
         config_49                                  = "Failed to read the configuration from koha-conf.xml. Check the error log.",
         config_51                                  = "The REST password was taken out of the configuration and stored separately for:",
         config_53                                  = "The plugin no longer reads the &lt;ksmessaging&gt; section of koha-conf.xml, and it is still there: its values are ignored. Use &quot;Fill from koha-conf.xml&quot; to copy the ones you need into the field below, remove any you do not need, and save them.",
+        config_54                                  = "Suomi.fi letters",
+        config_55                                  = "Notices that are set up for the suomifi transport. Edit the letter template in Koha Tools &rsaquo; Notices &amp; slips.",
+        config_56                                  = "Notice",
+        config_57                                  = "Letter code",
+        config_58                                  = "Module",
+        config_59                                  = "Branch",
+        config_60                                  = "Suomi.fi letter",
+        config_61                                  = "defined",
+        config_62                                  = "not defined",
+        config_63                                  = "Edit letter",
+        config_64                                  = "No notices are set up for Suomi.fi yet. Run &quot;Set up Suomi.fi messaging&quot; first.",
     }
 %]

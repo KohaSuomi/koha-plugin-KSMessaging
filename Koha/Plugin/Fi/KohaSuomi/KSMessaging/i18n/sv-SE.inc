@@ -50,5 +50,16 @@
         config_49                                  = "Det gick inte att läsa konfigurationen från koha-conf.xml. Kontrollera felloggen.",
         config_51                                  = "REST-lösenordet togs bort från konfigurationen och lagrades separat för:",
         config_53                                  = "Pluginet läser inte längre avsnittet &lt;ksmessaging&gt; i koha-conf.xml, och det finns fortfarande kvar: värdena ignoreras. Kopiera de du behöver med &quot;Fyll från koha-conf.xml&quot; till fältet nedan, ta bort de du inte behöver och spara dem.",
+        config_54                                  = "Suomi.fi-brev",
+        config_55                                  = "Meddelanden som är inställda för suomifi-transporten. Redigera brevmallen i Koha Verktyg &rsaquo; Meddelanden och blanketter.",
+        config_56                                  = "Meddelande",
+        config_57                                  = "Brevkod",
+        config_58                                  = "Modul",
+        config_59                                  = "Filial",
+        config_60                                  = "Suomi.fi-brev",
+        config_61                                  = "definierat",
+        config_62                                  = "inte definierat",
+        config_63                                  = "Redigera brev",
+        config_64                                  = "Inga meddelanden är ännu inställda för Suomi.fi. Kör först &quot;Ställ in Suomi.fi-meddelanden&quot;.",
     }
 %]

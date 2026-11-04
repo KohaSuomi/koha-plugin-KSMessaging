@@ -411,6 +411,43 @@ TU: TU23456</code></pre>
 
                     </div>
 
+                    <div class="ksmessaging-action-grid" style="margin-top: 1.5rem;">
+                        <div class="ksmessaging-action-card" style="grid-column: 1 / -1;">
+                            <h3>[% T.config_54 %]</h3>
+                            <p class="hint">[% T.config_55 %]</p>
+                            [% IF suomifi_letters.size %]
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>[% T.config_56 %]</th>
+                                            <th>[% T.config_58 %]</th>
+                                            <th>[% T.config_57 %]</th>
+                                            <th>[% T.config_59 %]</th>
+                                            <th>[% T.config_60 %]</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        [% FOREACH letter IN suomifi_letters %]
+                                        <tr>
+                                            <td>[% letter.message_name | html %]</td>
+                                            <td>[% letter.letter_module | html %]</td>
+                                            <td>[% letter.letter_code | html %]</td>
+                                            <td>[% letter.branchcode ? letter.branchcode : 'default' | html %]</td>
+                                            <td>[% letter.has_letter ? T.config_61 : T.config_62 %]</td>
+                                            <td><a class="btn btn-default btn-sm" href="[% letter.edit_url | url %]">[% T.config_63 %]</a></td>
+                                        </tr>
+                                        [% END %]
+                                    </tbody>
+                                </table>
+                            </div>
+                            [% ELSE %]
+                            <p class="hint">[% T.config_64 %]</p>
+                            [% END %]
+                        </div>
+                    </div>
+
                 </div>
 
             </main>

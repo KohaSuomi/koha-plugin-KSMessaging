@@ -403,6 +403,7 @@ sub run_configure {
             };
         }
     );
+    $setup_mock->mock( 'suomifi_letters', sub { return $args{suomifi_letters} || [] } );
 
     $TestToken::VALID = exists $args{token_valid} ? $args{token_valid} : 1;
     my $token_mock = Test::MockModule->new('Koha::Token');

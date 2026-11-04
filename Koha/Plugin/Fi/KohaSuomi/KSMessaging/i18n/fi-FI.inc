@@ -50,5 +50,16 @@
         config_49                                  = "Asetusten lukeminen koha-conf.xml-tiedostosta epäonnistui. Tarkista virheloki.",
         config_51                                  = "REST-salasana poistettiin asetuksista ja tallennettiin erilleen seuraaville toimipisteille:",
         config_53                                  = "Lisäosa ei enää lue koha-conf.xml-tiedoston &lt;ksmessaging&gt;-osiota, ja se on edelleen kohdassa, jolloin sen arvot jätetään huomiotta. Kopioi tarvitsemasi arvot &quot;Täytä koha-conf.xml-tiedostosta&quot; -painikkeella alle olevaan kenttään, poista tarpeettomat ja tallenna ne.",
+        config_54                                  = "Suomi.fi -kirjeet",
+        config_55                                  = "Ilmoitukset, jotka on määritetty suomifi-viestityyppiin. Muokkaa kirjepohjaa Kohassa Työkalut &rsaquo; Ilmoitukset ja kuitit.",
+        config_56                                  = "Ilmoitus",
+        config_57                                  = "Kirjekoodi",
+        config_58                                  = "Moduuli",
+        config_59                                  = "Toimipiste",
+        config_60                                  = "Suomi.fi -kirje",
+        config_61                                  = "määritetty",
+        config_62                                  = "ei määritetty",
+        config_63                                  = "Muokkaa kirjettä",
+        config_64                                  = "Suomi.fille ei ole vielä määritetty ilmoituksia. Suorita ensin &quot;Määritä Suomi.fi-viestintä&quot;.",
     }
 %]

@@ -120,6 +120,8 @@ sub configure {
     my $config = Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Config->new({});
     $config->load_for_configure;
 
+    my $suomifi_letters = [];
+
     # Show the stored configuration until we know we are handling a submission
     my $config_for_display = $config->loadedConfigForDisplay;
     my $suomifi_alt_sender_for_display = $config->loadedAltSenderForDisplay;
@@ -197,6 +199,13 @@ sub configure {
         }
     }
 
+    # The Suomi.fi message transports that are already set up, with links to
+    # their letter templates in Koha.  Read here so the list reflects the
+    # current state of the database rather than the state at the start of the
+    # request.
+    my $setup = Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Setup->new({});
+    $suomifi_letters = eval { $setup->suomifi_letters } || [];
+
     # The fill button and the warning about a leftover koha-conf.xml section
     # are only useful before anything has been stored.  Once plugin_data holds
     # a configuration, both are hidden so the page does not offer to overwrite
@@ -216,6 +225,7 @@ sub configure {
         moved_passwords => $config->moved_passwords,
         koha_conf_section => $config->koha_conf_section_present,
         has_stored_config => $has_stored_config,
+        suomifi_letters => $suomifi_letters,
     );
 }
 
@@ -279,6 +289,7 @@ sub _output_configure_page {
         moved_passwords => $params{moved_passwords},
         koha_conf_section => $params{koha_conf_section},
         has_stored_config => $params{has_stored_config},
+        suomifi_letters => $params{suomifi_letters},
     );
 
     return $self->output_html( $template->output() );
