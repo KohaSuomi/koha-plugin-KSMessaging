@@ -11,10 +11,13 @@ use C4::Context;
 use Try::Tiny;
 
 BEGIN {
-    # Add the Koha plugins directory so the plugin modules below can be
-    # loaded when this script is executed outside of a Koha web request.
-    push @INC, C4::Context->config("pluginsdir") if C4::Context->config("pluginsdir");
+    # find Koha's Perl modules
+    # test carefully before changing this
+    use FindBin;
+    eval { require "$FindBin::Bin/../kohalib.pl" };
 }
+
+use Koha::Plugins;
 
 use Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Config;
 use Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::SendMessages;

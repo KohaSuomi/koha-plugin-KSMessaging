@@ -1,16 +1,21 @@
 #!/usr/bin/perl
 
+BEGIN {
+    # find Koha's Perl modules
+    # test carefully before changing this
+    use FindBin;
+    eval { require "$FindBin::Bin/../kohalib.pl" };
+}
+
 use Modern::Perl;
 use C4::Context;
 use Getopt::Long;
 use Try::Tiny;
 use String::Random qw( random_string );
 use Koha::Caches;
+use Koha::Plugins;
 use POSIX qw(strftime);
-
-my $pluginsdir = C4::Context->config("pluginsdir");
-use lib $pluginsdir;
-
+use Koha::Plugin::Fi::KohaSuomi::KSMessaging;
 use Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Config;
 use Koha::Plugin::Fi::KohaSuomi::KSMessaging::Modules::Deliver::REST;
 
