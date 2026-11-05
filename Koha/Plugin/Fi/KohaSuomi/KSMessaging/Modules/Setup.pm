@@ -184,14 +184,15 @@ sub suomifi_letters {
         $tsth->finish;
     }
 
-    # Read every letter template in the managed modules so that custom
-    # notices that are not (yet) in message_transports are still listed.
+    # Read every letter template in the managed modules, including its language
+    # and transport type, so the page can show which language versions already
+    # have a Suomi.fi template.
     my $sth = eval {
         $dbh->prepare(
-            "SELECT DISTINCT module, code, branchcode, name "
+            "SELECT module, code, branchcode, lang, message_transport_type, name "
               . "FROM letter "
               . "WHERE module IN ($modules) "
-              . "ORDER BY module, code, branchcode"
+              . "ORDER BY module, code, branchcode, lang"
         );
     };
     return [] if $@ || !$sth;
@@ -219,8 +220,9 @@ sub suomifi_letters {
         $candidates{$key} = 1;
     }
     for my $row (@$letters_list) {
-        my ( $module, $code, $branchcode, $name ) = @$row;
+        my ( $module, $code, $branchcode, $lang, $transport_type, $name ) = @$row;
         $branchcode = '' unless defined $branchcode;
+        $lang       = 'default' unless defined $lang && $lang ne '';
         if ( exists $transport_codes{"$module|$code"}
             || ( $module eq 'circulation' && grep { $_ eq $code } @custom_codes ) )
         {
@@ -233,13 +235,20 @@ sub suomifi_letters {
         $candidates{"circulation|$code|"} = 1;
     }
 
-    # Index letter rows by key for name lookup.
+    # Aggregate language versions per letter.  A letter is complete only when
+    # every language version that exists for it also has a Suomi.fi template.
+    my %available;
+    my %defined;
     my %names;
     for my $row (@$letters_list) {
-        my ( $module, $code, $branchcode, $name ) = @$row;
+        my ( $module, $code, $branchcode, $lang, $transport_type, $name ) = @$row;
         $branchcode = '' unless defined $branchcode;
+        $lang       = 'default' unless defined $lang && $lang ne '';
         $name       = '' unless defined $name;
         my $key = "$module|$code|$branchcode";
+        $available{$key}{$lang} = 1;
+        $defined{$key}{$lang} = 1 if defined $transport_type
+            && $transport_type eq $TRANSPORT_TYPE;
         $names{$key} = $name if !exists $names{$key} || $names{$key} eq '';
     }
 
@@ -252,24 +261,29 @@ sub suomifi_letters {
           ? $names{$key}
           : $letter_code;
 
-        my $has_letter = 0;
-        my $lsth       = eval {
-            $dbh->prepare(
-                "SELECT COUNT(*) FROM letter "
-                  . "WHERE module = ? AND code = ? AND branchcode = ? "
-                  . "AND message_transport_type = ?"
-            );
-        };
-        if ($lsth) {
-            my $lrows = eval {
-                $lsth->execute( $letter_module, $letter_code, $branchcode,
-                    $TRANSPORT_TYPE );
-            };
-            if ( !$@ && $lrows ) {
-                ($has_letter) = $lsth->fetchrow_array;
-            }
-            $lsth->finish;
+        my @available_langs = sort keys %{ $available{$key} || {} };
+        my %defined_langs   = %{ $defined{$key} || {} };
+
+        my @missing_langs;
+        for my $lang (@available_langs) {
+            push @missing_langs, $lang unless $defined_langs{$lang};
         }
+
+        # A letter with no template at all is incomplete and has no language
+        # summary; otherwise show each available language with its status.
+        my $languages_summary;
+        if (@available_langs) {
+            my @parts;
+            for my $lang (@available_langs) {
+                push @parts, $lang . ( $defined_langs{$lang} ? ' ✓' : ' ✗' );
+            }
+            $languages_summary = join( ', ', @parts );
+        }
+        else {
+            $languages_summary = '';
+        }
+
+        my $has_letter = ( @available_langs && !@missing_langs ) ? 1 : 0;
 
         my $edit_url =
             "/cgi-bin/koha/tools/letter.pl?op=add_form"
@@ -279,12 +293,13 @@ sub suomifi_letters {
 
         push @letters,
           {
-            name            => $name,
-            letter_module   => $letter_module,
-            letter_code     => $letter_code,
-            branchcode      => $branchcode,
-            has_letter      => $has_letter ? 1 : 0,
-            edit_url        => $edit_url,
+            name               => $name,
+            letter_module      => $letter_module,
+            letter_code        => $letter_code,
+            branchcode         => $branchcode,
+            has_letter         => $has_letter ? 1 : 0,
+            languages          => $languages_summary,
+            edit_url           => $edit_url,
           };
     }
 

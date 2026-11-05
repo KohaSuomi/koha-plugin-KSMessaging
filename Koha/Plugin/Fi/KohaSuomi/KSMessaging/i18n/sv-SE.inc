@@ -61,5 +61,6 @@
         config_62                                  = "inte definierat",
         config_63                                  = "Redigera brev",
         config_64                                  = "Inga meddelanden är ännu inställda för Suomi.fi. Kör först &quot;Ställ in Suomi.fi-meddelanden&quot;.",
+        config_65                                  = "Språk",
     }
 %]
