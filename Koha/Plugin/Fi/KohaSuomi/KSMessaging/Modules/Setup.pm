@@ -264,6 +264,11 @@ sub suomifi_letters {
         my @available_langs = sort keys %{ $available{$key} || {} };
         my %defined_langs   = %{ $defined{$key} || {} };
 
+        # A letter with no template yet has no language versions in the
+        # database, but the default language can always be filled in, so show
+        # it as missing instead of leaving the cell empty.
+        @available_langs = ('default') unless @available_langs;
+
         my @missing_langs;
         for my $lang (@available_langs) {
             push @missing_langs, $lang unless $defined_langs{$lang};
