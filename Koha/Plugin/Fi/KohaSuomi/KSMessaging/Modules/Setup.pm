@@ -269,18 +269,12 @@ sub suomifi_letters {
             push @missing_langs, $lang unless $defined_langs{$lang};
         }
 
-        # A letter with no template at all is incomplete and has no language
-        # summary; otherwise show each available language with its status.
-        my $languages_summary;
-        if (@available_langs) {
-            my @parts;
-            for my $lang (@available_langs) {
-                push @parts, $lang . ( $defined_langs{$lang} ? ' ✓' : ' ✗' );
-            }
-            $languages_summary = join( ', ', @parts );
-        }
-        else {
-            $languages_summary = '';
+        # One entry per available language version, so the template can render
+        # an icon and a colour for each of them.
+        my @language_versions;
+        for my $lang (@available_langs) {
+            push @language_versions,
+              { lang => $lang, defined => $defined_langs{$lang} ? 1 : 0 };
         }
 
         my $has_letter = ( @available_langs && !@missing_langs ) ? 1 : 0;
@@ -298,7 +292,7 @@ sub suomifi_letters {
             letter_code        => $letter_code,
             branchcode         => $branchcode,
             has_letter         => $has_letter ? 1 : 0,
-            languages          => $languages_summary,
+            language_versions  => \@language_versions,
             edit_url           => $edit_url,
           };
     }
