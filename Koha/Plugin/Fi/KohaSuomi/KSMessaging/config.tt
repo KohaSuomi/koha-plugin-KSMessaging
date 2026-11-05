@@ -425,7 +425,6 @@ TU: TU23456</code></pre>
                                             <th>[% T.config_57 %]</th>
                                             <th>[% T.config_59 %]</th>
                                             <th>[% T.config_65 %]</th>
-                                            <th>[% T.config_60 %]</th>
                                             <th></th>
                                         </tr>
                                     </thead>
@@ -442,13 +441,6 @@ TU: TU23456</code></pre>
                                                         <i class="fa [% lv.defined ? 'fa-check' : 'fa-times' %]"></i>
                                                         [% lv.lang %]
                                                     </span>[% UNLESS loop.last %], [% END %]
-                                                [% END %]
-                                            </td>
-                                            <td>
-                                                [% IF letter.has_letter %]
-                                                    <i class="fa fa-check text-success"></i> [% T.config_61 %]
-                                                [% ELSE %]
-                                                    <i class="fa fa-times text-danger"></i> [% T.config_62 %]
                                                 [% END %]
                                             </td>
                                             <td><a class="btn btn-default btn-sm" href="[% letter.edit_url | url %]">[% T.config_63 %]</a></td>

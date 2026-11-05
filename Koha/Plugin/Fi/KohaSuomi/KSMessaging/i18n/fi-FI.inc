@@ -61,6 +61,6 @@
         config_62                                  = "ei määritetty",
         config_63                                  = "Muokkaa kirjettä",
         config_64                                  = "Suomi.fille ei ole vielä määritetty ilmoituksia. Suorita ensin &quot;Määritä Suomi.fi-viestintä&quot;.",
-        config_65                                  = "Kielet",
+        config_65                                  = "Pohjat",
     }
 %]

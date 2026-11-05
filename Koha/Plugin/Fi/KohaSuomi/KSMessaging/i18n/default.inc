@@ -61,6 +61,6 @@
         config_62                                  = "not defined",
         config_63                                  = "Edit letter",
         config_64                                  = "No notices are set up for Suomi.fi yet. Run &quot;Set up Suomi.fi messaging&quot; first.",
-        config_65                                  = "Languages",
+        config_65                                  = "Templates",
     }
 %]
