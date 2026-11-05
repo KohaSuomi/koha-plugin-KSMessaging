@@ -237,20 +237,27 @@ sub suomifi_letters {
 
     # Aggregate language versions per letter.  A letter is complete only when
     # every language version that exists for it also has a Suomi.fi template.
-    my %available;
+    #
+    # The set of languages is taken from every template in the managed modules,
+    # so that a language version which is missing for one letter is still shown
+    # (as missing) rather than disappearing from the list.
     my %defined;
     my %names;
+    my %global_langs;
     for my $row (@$letters_list) {
         my ( $module, $code, $branchcode, $lang, $transport_type, $name ) = @$row;
         $branchcode = '' unless defined $branchcode;
         $lang       = 'default' unless defined $lang && $lang ne '';
         $name       = '' unless defined $name;
         my $key = "$module|$code|$branchcode";
-        $available{$key}{$lang} = 1;
+        $global_langs{$lang} = 1;
         $defined{$key}{$lang} = 1 if defined $transport_type
             && $transport_type eq $TRANSPORT_TYPE;
         $names{$key} = $name if !exists $names{$key} || $names{$key} eq '';
     }
+
+    my @global_langs = sort keys %global_langs;
+    @global_langs = ('default') unless @global_langs;
 
     my @letters;
     for my $key ( sort keys %candidates ) {
@@ -261,13 +268,8 @@ sub suomifi_letters {
           ? $names{$key}
           : $letter_code;
 
-        my @available_langs = sort keys %{ $available{$key} || {} };
+        my @available_langs = @global_langs;
         my %defined_langs   = %{ $defined{$key} || {} };
-
-        # A letter with no template yet has no language versions in the
-        # database, but the default language can always be filled in, so show
-        # it as missing instead of leaving the cell empty.
-        @available_langs = ('default') unless @available_langs;
 
         my @missing_langs;
         for my $lang (@available_langs) {
