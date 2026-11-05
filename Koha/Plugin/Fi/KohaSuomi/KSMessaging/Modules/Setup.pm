@@ -238,26 +238,33 @@ sub suomifi_letters {
     # Aggregate language versions per letter.  A letter is complete only when
     # every language version that exists for it also has a Suomi.fi template.
     #
-    # The set of languages is taken from every template in the managed modules,
-    # so that a language version which is missing for one letter is still shown
-    # (as missing) rather than disappearing from the list.
+    # The set of languages comes from Koha's staff interface language menu
+    # (#i18nMenu, StaffInterfaceLanguages), so that a language version which
+    # is missing for one letter is still shown (as missing) rather than
+    # disappearing from the list.  'default' is always included.
     my %defined;
     my %names;
-    my %global_langs;
+    my $enabled = C4::Context->preference('StaffInterfaceLanguages');
+    my @global_langs = ('default');
+    if ( defined $enabled && $enabled ne '' ) {
+        push @global_langs, split /,/, $enabled;
+    }
+    else {
+        push @global_langs, 'en';
+    }
+    my %seen;
+    @global_langs = grep { !$seen{$_}++ } @global_langs;
+
     for my $row (@$letters_list) {
         my ( $module, $code, $branchcode, $lang, $transport_type, $name ) = @$row;
         $branchcode = '' unless defined $branchcode;
         $lang       = 'default' unless defined $lang && $lang ne '';
         $name       = '' unless defined $name;
         my $key = "$module|$code|$branchcode";
-        $global_langs{$lang} = 1;
         $defined{$key}{$lang} = 1 if defined $transport_type
             && $transport_type eq $TRANSPORT_TYPE;
         $names{$key} = $name if !exists $names{$key} || $names{$key} eq '';
     }
-
-    my @global_langs = sort keys %global_langs;
-    @global_langs = ('default') unless @global_langs;
 
     my @letters;
     for my $key ( sort keys %candidates ) {
