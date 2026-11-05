@@ -115,6 +115,13 @@ check first.
 Those selections are what put notices into the message queue with the `suomifi`
 transport type, and `pate.pl --suomifi` picks up exactly those pending notices.
 
+The same page also lists the notice templates that can be defined on users'
+message preferences, grouped by module, letter code and branch. Each row shows
+which language versions already have a Suomi.fi template (✓) and which are
+still missing (✗), and links to the corresponding notice in
+**Tools → Notices & slips**, where the missing language versions can be filled
+in. Custom notices such as `ODUE1` and `ODUE2` are listed as well.
+
 The `SuomiFiMessaging` system preference behind the column is not declared in
 any `.pref` file and the plugin does not send messages based on it, so it is not
 shown in **Administration → System preferences** and it does not stop the

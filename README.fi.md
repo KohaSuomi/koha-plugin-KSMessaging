@@ -113,6 +113,13 @@ kopioi valinnat muista viestityypeistä, joten ne kannattaa tarkistaa ensin.
 Nämä valinnat lisäävät viestijonoon ilmoitukset, joiden viestityyppi on
 `suomifi`, ja `pate.pl --suomifi` poimii juuri ne odottavat ilmoitukset.
 
+Samalla sivulla näytetään myös käyttäjien viestitysasetuksissa määriteltävissä
+olevat ilmoituspohjat moduulin, kirjekoodin ja toimipisteen mukaan. Kullakin
+rivillä näkyy, mitkä kieliversiot jo sisältävät Suomi.fi-pohjan (✓) ja mitkä
+puuttuvat (✗), ja rivi linkittää vastaavaan ilmoitukseen kohdassa
+**Työkalut → Ilmoitukset ja kuitit**, jossa puuttuvat kieliversiot voi täyttää.
+Myös mukautetut ilmoitukset, kuten `ODUE1` ja `ODUE2`, näkyvät listassa.
+
 Sarakkeen takana olevaa `SuomiFiMessaging`-järjestelmäasetusta ei ole määritelty
 missään `.pref`-tiedostossa eikä lisäosa lähetä viestejä sen perusteella, joten
 se ei näy kohdassa **Ylläpito → Järjestelmäasetukset** eikä estä ilmoituksia.
